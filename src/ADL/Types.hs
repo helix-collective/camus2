@@ -6,6 +6,7 @@ module ADL.Types(
     DynamicConfigName,
     EndPointLabel,
     FilePath,
+    ReleaseLabel,
     S3Path,
     StaticConfigName,
     StringKeyMap,
@@ -32,6 +33,8 @@ type DynamicConfigName = ConfigName
 type EndPointLabel = T.Text
 
 type FilePath = T.Text
+
+type ReleaseLabel = T.Text
 
 type S3Path = T.Text
 

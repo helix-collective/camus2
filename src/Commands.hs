@@ -20,7 +20,7 @@ import qualified Commands.ProxyMode as P
 import qualified ADL.Sys.Types as ST
 
 import ADL.Config(ToolConfig(..), DeployMode(..), ProxyModeConfig(..), DynamicConfigOptions(..), DynamicJsonSource(..), JsonSource(..))
-import ADL.Types(DynamicConfigName, StringKeyMap, DynamicConfigMode)
+import ADL.Types(DynamicConfigName, StringKeyMap, DynamicConfigMode, DeployLabel, ReleaseLabel)
 import ADL.Release(ReleaseConfig(..))
 import ADL.Core(adlFromJsonFile')
 import Blobs(releaseBlobStore, BlobStore(..))
@@ -52,14 +52,14 @@ import Util.Aws(mkAwsEnv)
 import Commands.ProxyMode.LocalState(nginxConfTemplate)
 
 -- Make the specified release the live release, replacing any existing release.
-createAndStart :: T.Text -> T.Text -> IOR ()
+createAndStart :: ReleaseLabel -> DeployLabel -> IOR ()
 createAndStart release  asDeploy = do
   tcfg <- getToolConfig
   case tc_deployMode tcfg of
     DeployMode_noproxy -> startNoProxy release
     _ -> P.createAndStart release asDeploy
 
-startNoProxy :: T.Text -> IOR ()
+startNoProxy :: ReleaseLabel -> IOR ()
 startNoProxy release = do
   scopeInfo ("Selecting active release " <> release) $ do
     tcfg <- getToolConfig
@@ -99,14 +99,14 @@ startNoProxy release = do
         callCommand (T.unpack (rc_startCommand rcfg))
 
 -- Stop the specified deployment.
-stopDeploy :: T.Text -> IOR ()
+stopDeploy :: DeployLabel -> IOR ()
 stopDeploy deploy = do
   tcfg <- getToolConfig
   case tc_deployMode tcfg of
     DeployMode_noproxy -> stopNoProxy deploy
     _ -> P.stopAndRemove deploy
 
-stopNoProxy :: T.Text -> IOR ()
+stopNoProxy :: DeployLabel -> IOR ()
 stopNoProxy deploy = do
   tcfg <- getToolConfig
   --let newReleaseDir = T.unpack (tc_deploysDir tcfg) </> (takeBaseName (T.unpack deploy))

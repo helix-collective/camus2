@@ -12,6 +12,8 @@ type EndPointLabel = String;
 
 type DeployLabel = String;
 
+type ReleaseLabel = String;
+
 /// ConfigName is a name of one of the keys of the top level object used for template interpolation
 type ConfigName = String;
 
