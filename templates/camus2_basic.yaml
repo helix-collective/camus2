@@ -2,9 +2,9 @@
 #
 # The configuration can be supplied in yaml or json, and needs to
 # adhere to a strict format. For more information, refer to 
-# https://github.com/helix-collective/hx-deploy-tool/blob/master/adl/config.adl
+# https://github.com/helix-collective/camus2/blob/master/adl/config.adl
 # where the ADL spec is defined, or have a look at the documented examples
-# https://helix-collective.github.io/hx-deploy-tool/
+# https://helix-collective.github.io/camus2/
 #
 #
 # The following is the configuration for the basic deployment example:

@@ -4,5 +4,5 @@
 
 ---
 
-- [Index](/hx-deploy-tool/index)
-- [Developers Guide/Source code](https://github.com/helix-collective/hx-deploy-tool)
+- [Index](/camus2/index)
+- [Developers Guide/Source code](https://github.com/helix-collective/camus2)

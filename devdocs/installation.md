@@ -41,13 +41,13 @@ as per `Credentials Discover` mode in the amazonka library:
 http://hackage.haskell.org/package/amazonka-1.6.1/docs/Network-AWS-Auth.html
 
 
-[releases]:https://github.com/helix-collective/hx-deploy-tool/releases
+[releases]:https://github.com/helix-collective/camus2/releases
 [stack]:https://docs.haskellstack.org/en/stable/README/ 
-[toolconfig-adl]:https://github.com/helix-collective/hx-deploy-tool/blob/master/adl/config.adl#L11
+[toolconfig-adl]:https://github.com/helix-collective/camus2/blob/master/adl/config.adl#L11
 [adl]:https://github.com/timbod7/adl
 
 
 ---
 
-- [Usage](/helix-collective/devdocs/help.md)
-- [Userguide home](https://helix-collective.github.io/hx-deploy-tool/index.html)
+- [Usage](devdocs/help.md)
+- [Userguide home](https://helix-collective.github.io/camus2/index.html)
