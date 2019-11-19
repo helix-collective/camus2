@@ -230,7 +230,7 @@ writeProxyDockerCompose tcfg path = T.writeFile path (T.intercalate "\n" lines)
       , "services:"
       , "  nginx:"
       , "    container_name: frontendproxy"
-      , "    image: nginx:1.13.0"
+      , "    image: nginx:1.16.1"
       , "    network_mode: host"
       , "    volumes:"
       , "      - ./nginx.conf:/etc/nginx/nginx.conf"
