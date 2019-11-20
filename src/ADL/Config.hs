@@ -305,11 +305,12 @@ data ToolConfig = ToolConfig
     , tc_dynamicConfigSources :: (ADL.Types.StringKeyMap ADL.Types.DynamicConfigName DynamicJsonSource)
     , tc_deployMode :: DeployMode
     , tc_healthCheck :: (ADL.Sys.Types.Maybe HealthCheckConfig)
+    , tc_nginxDockerVersion :: T.Text
     }
     deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
 
 mkToolConfig :: BlobStoreConfig -> ToolConfig
-mkToolConfig releases = ToolConfig "/opt/deploys" "/opt/config" "/opt/var/log/camus2.log" "/opt" "/opt/var/www" "camus2cert" "" releases (stringMapFromList []) (stringMapFromList []) DeployMode_noproxy (Prelude.Just (HealthCheckConfig "/health-check" "/"))
+mkToolConfig releases = ToolConfig "/opt/deploys" "/opt/config" "/opt/var/log/camus2.log" "/opt" "/opt/var/www" "camus2cert" "" releases (stringMapFromList []) (stringMapFromList []) DeployMode_noproxy (Prelude.Just (HealthCheckConfig "/health-check" "/")) "1.16.1"
 
 instance AdlValue ToolConfig where
     atype _ = "config.ToolConfig"
@@ -327,6 +328,7 @@ instance AdlValue ToolConfig where
         , genField "dynamicConfigSources" tc_dynamicConfigSources
         , genField "deployMode" tc_deployMode
         , genField "healthCheck" tc_healthCheck
+        , genField "nginxDockerVersion" tc_nginxDockerVersion
         ]
     
     jsonParser = ToolConfig
@@ -342,6 +344,7 @@ instance AdlValue ToolConfig where
         <*> parseFieldDef "dynamicConfigSources" (stringMapFromList [])
         <*> parseFieldDef "deployMode" DeployMode_noproxy
         <*> parseFieldDef "healthCheck" (Prelude.Just (HealthCheckConfig "/health-check" "/"))
+        <*> parseFieldDef "nginxDockerVersion" "1.16.1"
 
 data Verbosity
     = Verbosity_quiet
