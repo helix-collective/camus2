@@ -41,6 +41,9 @@ struct ToolConfig {
        "incomingPath" : "/health-check",
        "outgoingPath" : "/"
     }};
+
+    /// The version of the standard nginx docker image to use
+    String nginxDockerVersion = "1.16.1";
 };
 
 union DeployMode {

@@ -2,6 +2,7 @@
     "deploysDir": "{*REQUIRED*RELEASE DIRECTORY}",
     "contextCache": "{*REQUIRED*CONFIG DIRECTORY}",
     "logFile": "{*REQUIRED*LOG FILE LOCATION: requires directory to exist}",
+    "nginxDockerVersion": "{NGINX_DOCKER_VERSION}",
     "letsencryptPrefixDir": "{PREFIX DIRECTORY}",
     "letsencryptWwwDir": "{WEBSERVER DIRECTORY}",
     "autoCertName": "{AWS SSH CERT NAME}",
