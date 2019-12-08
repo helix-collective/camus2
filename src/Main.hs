@@ -50,7 +50,8 @@ main = do
  
     ["status"]                                  -> runWithConfig       (P.showStatus False)
     ["status", "--show-slaves"]                 -> runWithConfig       (P.showStatus True)
-    ["start", release]                          -> runWithConfigAndLog (C.createAndStart (T.pack release))
+    ["start", release]                          -> runWithConfigAndLog (C.createAndStart (T.pack release) (T.pack release))
+    ["start", release, asDeploy]                -> runWithConfigAndLog (C.createAndStart (T.pack release) (T.pack asDeploy))
     ["stop", deploy]                            -> runWithConfigAndLog (C.stopDeploy (T.pack deploy))
     ["connect", endpoint, deploy]               -> runWithConfigAndLog (P.connect (T.pack endpoint) (T.pack deploy))
     ["disconnect", endpoint]                    -> runWithConfigAndLog (P.disconnect (T.pack endpoint))
@@ -162,10 +163,10 @@ usageText = "\
   \\n\
   \Deployment with a proxy:\n\
   \  c2 status [--show-slaves]\n\
-  \  c2 start <release>\n\
-  \  c2 stop <release>\n\
+  \  c2 start <release> [<asdeploy>]\n\
+  \  c2 stop <deploy>\n\
   \  c2 restart-frontend-proxy\n\
-  \  c2 connect <endpoint> <release>\n\
+  \  c2 connect <endpoint> <deploy>\n\
   \  c2 disconnect <endpoint>\n\
   \\n\
   \Deployment without a proxy:\n\

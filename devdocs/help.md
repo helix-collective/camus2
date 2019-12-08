@@ -36,13 +36,15 @@ The following subcommands are used to manage reverse proxy deployments:
 Show the proxy system status: specifically the endpoints and live
 deploys.
 
-## c2 start <release>
-Create and start a deployment (if it's not already running)
+## c2 start <release> [<asdeploy>]
+Create and start a deployment (if it's not already running). The
+name of the deploy is optional - if not provided it defaults to the
+release name.
 
-## c2 stop <release>
+## c2 stop <deploy>
 Stop and remove a deployment
 
-## c2 connect <endpoint> <release>
+## c2 connect <endpoint> <deploy>
 Connect an endpoint to a running deployment
 
 ## c2 disconnect <endpoint>

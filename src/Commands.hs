@@ -52,12 +52,12 @@ import Util.Aws(mkAwsEnv)
 import Commands.ProxyMode.LocalState(nginxConfTemplate)
 
 -- Make the specified release the live release, replacing any existing release.
-createAndStart :: T.Text -> IOR ()
-createAndStart release = do
+createAndStart :: T.Text -> T.Text -> IOR ()
+createAndStart release  asDeploy = do
   tcfg <- getToolConfig
   case tc_deployMode tcfg of
     DeployMode_noproxy -> startNoProxy release
-    _ -> P.createAndStart release
+    _ -> P.createAndStart release asDeploy
 
 startNoProxy :: T.Text -> IOR ()
 startNoProxy release = do

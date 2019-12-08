@@ -86,13 +86,16 @@ showStatus showSlaves = do
       T.putStrLn ""
       T.putStrLn "Deploys:"
       for_ (SM.elems (s_deploys state)) $ \d -> do
-        T.putStrLn ("  " <> d_label d <> ": (localhost:" <> showText (d_port d) <> ")")
+        let labeltext = if d_label d == d_release d
+            then d_label d
+            else d_label d <> " (" <> d_release d <> ")"
+        T.putStrLn ("  " <> labeltext <> ": (localhost:" <> showText (d_port d) <> ")")
 
 -- | Create and start a deployment (if it's not already running)
-createAndStart :: T.Text -> IOR ()
-createAndStart release = do
+createAndStart :: T.Text -> T.Text -> IOR ()
+createAndStart release asDeploy = do
   checkReleaseExists release
-  scopeInfo ("Create and start deploy " <> release) $ do
+  scopeInfo ("Create and start release " <> release <> " as deploy " <> asDeploy) $ do
     pm <- getProxyModeConfig
     tcfg <- getToolConfig
     state <- getState
@@ -100,7 +103,7 @@ createAndStart release = do
     dcfgmodes <- return SM.empty
     updateState (nextState (createDeploy port dcfgmodes))
   where
-    createDeploy port dcfgmodes = (CreateDeploy (Deploy release release port dcfgmodes))
+    createDeploy port dcfgmodes = (CreateDeploy (Deploy asDeploy release port dcfgmodes))
 
 -- | Stop and remove a deployment
 stopAndRemove :: T.Text -> IOR ()
