@@ -130,7 +130,7 @@ executeAction (CreateDeploy d) = do
 executeAction (DestroyDeploy d) = do
   scopeInfo "execute DestroyDeploy" $ do
     tcfg <- getToolConfig
-    let deployDir = T.unpack (tc_deploysDir tcfg) </> (takeBaseName (T.unpack (d_release d)))
+    let deployDir = T.unpack (tc_deploysDir tcfg) </> (takeBaseName (T.unpack (d_label d)))
     rcfg <- getReleaseConfig deployDir
     scopeInfo "running stop script" $ callCommandInDir deployDir (rc_stopCommand rcfg)
     scopeInfo "removing directory" $ liftIO $ removeDirectoryRecursive deployDir
