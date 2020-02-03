@@ -223,3 +223,6 @@ reconfigDeploy deploy dcname dcmode = do
   -- dev: just print something
   -- todo: check dcname is valid
   -- todo: check dcmode is valid for dcname
+  case tc_deployMode tcfg of
+    DeployMode_noproxy -> error (T.unpack ("dynamic config not implemented on non-proxy deployments"))
+    _ -> P.reconfig deploy dcname dcmode

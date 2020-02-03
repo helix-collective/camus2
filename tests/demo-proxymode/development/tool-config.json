@@ -1,0 +1,70 @@
+{
+    "deploysDir" : "--MACHINE_ROOT--/opt/deploys",
+    "contextCache" : "--MACHINE_ROOT--/opt/etc/configsCache",
+    "logFile" : "--MACHINE_ROOT--/opt/camus2.log",
+    "releases" : {
+        "localdir" : "--S3EMULATE--/releaseZips/"
+    },
+    "configSources": {
+        "configsrcW" : {
+            "file" : "--S3EMULATE--/configSources/configsrcW.json"
+        },
+        "configsrcX" : {
+            "file" : "--S3EMULATE--/configSources/configsrcX.json"
+        },
+        "configsrcY" : {
+            "file" : "--S3EMULATE--/configSources/configsrcY.json"
+        }
+    },
+
+    "dynamicConfigSources": {
+        "frontend" : {
+            "defaultMode" : "online",
+            "modes" : {
+                "online" : {
+                    "file" : "--S3EMULATE--/configSources/frontendOnline.json"
+                },
+                "offline" : {
+                    "file" : "--S3EMULATE--/configSources/frontendOffline.json"
+                }
+            }
+        },
+
+        "queue" : {
+            "defaultMode" : "inactive",
+            "modes" : {
+                "inactive" : {
+                    "file" : "--S3EMULATE--/configSources/queueConfigInactive.json"
+                },
+                "active" : {
+                    "file" : "--S3EMULATE--/configSources/queueConfigActive.json"
+                }
+            }
+        },
+
+        "processor" : {
+            "defaultMode" : "light",
+            "modes" : {
+                "light" : {
+                    "file" : "--S3EMULATE--/configSources/processorConfigLight.json"
+                },
+                "heavy" : {
+                    "file" : "--S3EMULATE--/configSources/processorConfigHeavy.json"
+                }
+            }
+        }
+    },
+
+    "deployMode" : {
+        "proxy": {
+            "endPoints" : {
+                "main": {
+                    "serverNames": [
+                        "main.localhost"
+                    ],
+                    "etype": "httpOnly"
+                }
+            }
+        }
+    }
+}

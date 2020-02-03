@@ -1,0 +1,8 @@
+{
+    "note" : "from frontend config online",
+    "frontend": {
+        "offline": {
+            "message" : "Under maintenance msg..."
+        }
+    }
+}

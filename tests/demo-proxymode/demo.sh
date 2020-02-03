@@ -11,10 +11,6 @@ cd machine; cd opt/bin
 echo "Emulating launch of a deploy on a machine"
 
 echo
-echo "./c2  #help"
-./c2
-
-echo
 echo "./c2 start release-xx-yy-zz.zip:"
 ./c2 start release-xx-yy-zz.zip
 
@@ -34,4 +30,14 @@ echo
 echo "./c2 show-config-modes frontend"
 ./c2 show-config-modes frontend
 
-# Dynamic config not implemented for non-proxy mode
+echo
+echo "./c2 status"
+./c2 status
+
+#echo
+#echo "./c2 reconfig release-xx-yy-zz.zip frontend offline"
+#./c2 reconfig release-xx-yy-zz.zip frontend offline
+
+echo
+echo "./c2 stop release-xx-yy-zz.zip:"
+./c2 stop release-xx-yy-zz.zip

@@ -9,6 +9,7 @@ module Commands.ProxyMode(
   slaveUpdate,
   restartProxy,
   generateSslCertificate,
+  reconfig,
   ) where
 
 import qualified ADL.Core.StringMap as SM
@@ -27,7 +28,7 @@ import ADL.Core(adlFromJsonFile', adlToJsonFile)
 import ADL.Release(ReleaseConfig(..))
 import ADL.Config(ToolConfig(..), DeployMode(..), ProxyModeConfig(..), MachineLabel(..))
 import ADL.State(State(..), Deploy(..), SlaveState(..), SlaveStatus(..))
-import ADL.Types(EndPointLabel, DeployLabel)
+import ADL.Types(DynamicConfigName, StringKeyMap, DynamicConfigMode, EndPointLabel, DeployLabel, ReleaseLabel)
 import Util(unpackRelease,fetchConfigContext, checkReleaseExists)
 import Commands.ProxyMode.Types
 import Commands.ProxyMode.LocalState(localState, restartLocalProxy, generateLocalSslCertificate)
@@ -146,6 +147,30 @@ disconnect endPointLabel = do
       Just endPoint -> return ()
     updateState (\s -> s{s_connections=SM.delete endPointLabel (s_connections s)})
 
+reconfig :: DeployLabel -> DynamicConfigName -> DynamicConfigMode -> IOR ()
+reconfig deployLabel dcname dcmode = do
+  scopeInfo ("Reconfiguring deployment " <> deployLabel <> " " <> dcname <> " to " <> dcmode) $ do
+    pm <- getProxyModeConfig
+    tcfg <- getToolConfig
+    state <- getState
+    -- verify deployLabel
+    case SM.lookup deployLabel (s_deploys state) of
+      Nothing -> error (T.unpack ("no deploy called " <> deployLabel))
+      Just deploy -> return ()
+
+    -- verify dcname
+    --case SM.lookup endPointLabel (pm_endPoints pm) of
+    --  Nothing -> error (T.unpack ("no endpoint called " <> endPointLabel))
+    --  Just endPoint -> return ()
+
+    -- verify (dcname,dcmode)
+    --case SM.lookup endPointLabel (pm_endPoints pm) of
+    --  Nothing -> error (T.unpack ("no endpoint called " <> endPointLabel))
+    --  Just endPoint -> return ()
+
+    -- updateState with details
+    -- updateState (\s -> s{s_connections=SM.insert endPointLabel deployLabel (s_connections s)})
+
 -- | Update local state to reflect the master state from S3
 slaveUpdate :: Maybe Int -> IOR ()
 slaveUpdate Nothing = slaveUpdate_
@@ -192,11 +217,11 @@ getSlaveIP interfaceName interfaces = do
   case interfaceByName of
     interface:_ -> ( T.pack . show . ipv4 ) interface
     _ -> (T.pack "Network Interface " <> interfaceName <> "not found" )
-    where 
-      interfaceByName = filterNetworkInterfaces interfaceName interfaces 
+    where
+      interfaceByName = filterNetworkInterfaces interfaceName interfaces
 
       filterNetworkInterfaces ::  T.Text -> [NetworkInterface] ->  [NetworkInterface]
-      filterNetworkInterfaces interfaceName interfaces = filter (\x -> name x == (T.unpack interfaceName) ) interfaces    
+      filterNetworkInterfaces interfaceName interfaces = filter (\x -> name x == (T.unpack interfaceName) ) interfaces
 
 -- Flash slave state from S3 that is more than 5 minutes old
 slaveFlush :: IOR ()

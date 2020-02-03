@@ -1,0 +1,12 @@
+{
+  "prestartCommand": "/bin/bash ./prestart.sh",
+  "startCommand": "docker-compose up -d",
+  "stopCommand": "docker-compose stop && docker-compose rm -f && docker system prune -f",
+  "templates": [
+    "docker-compose.yml.tpl",
+    "fluentd.conf.tpl",
+    "appserver.cfg.tpl",
+    "certificate.crt.tpl",
+    "nginx.conf.tpl"
+  ]
+}
