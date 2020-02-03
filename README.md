@@ -62,6 +62,11 @@ The config file is read from the file specified with CAMUS2_CONFIG.
 It defaults to ../etc/camus2.(json|yaml) relative to the executable.
 ```
 
+# Developer Overview
+
+- Build: `./scripts/docker-build.sh`
+- Test: `(cd tests/demo; ./demo.sh)`
+
 # Additional Information
 
 - [Installation and configuration](devdocs/installation.md)
