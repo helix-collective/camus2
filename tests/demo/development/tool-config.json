@@ -18,6 +18,18 @@
     },
 
     "dynamicConfigSources": {
+        "frontend" : {
+            "defaultMode" : "online",
+            "modes" : {
+                "online" : {
+                    "file" : "--S3EMULATE--/configSources/frontendOnline.json"
+                },
+                "offline" : {
+                    "file" : "--S3EMULATE--/configSources/frontendOffline.json"
+                }
+            }
+        },
+
         "queue" : {
             "defaultMode" : "inactive",
             "modes" : {
