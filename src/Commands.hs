@@ -188,7 +188,7 @@ listDynamicConfigOptions dcsrcs = SM.fromList (M.toList (M.map dynamicJsonSource
 getConfigOptionsText :: DynamicConfigOptions -> [T.Text]
 getConfigOptionsText dcopts = map dcNameModesText (SM.toList dcopts)
   where
-    dcNameModesText :: (T.Text, ST.Set DynamicConfigMode) -> T.Text
+    dcNameModesText :: (DynamicConfigName, ST.Set DynamicConfigMode) -> T.Text
     dcNameModesText tupl = T.intercalate (T.pack ": ") [T.justifyLeft 10 ' ' (fst tupl), dcModesText (snd tupl)]
 
     dcModesText :: (ST.Set DynamicConfigMode) -> T.Text
@@ -214,3 +214,12 @@ showConfigModes :: DynamicConfigName -> IOR ()
 showConfigModes dcname = do
   tcfg <- getToolConfig
   liftIO $ printDynamicConfigOptionsSingle dcname (listDynamicConfigOptions (tc_dynamicConfigSources tcfg))
+
+-- Update the configuration of a deployment
+reconfigDeploy :: DeployLabel -> DynamicConfigName -> DynamicConfigMode -> IOR ()
+reconfigDeploy deploy dcname dcmode = do
+  tcfg <- getToolConfig
+  liftIO $ printDynamicConfigOptionsSingle dcname (listDynamicConfigOptions (tc_dynamicConfigSources tcfg))
+  -- dev: just print something
+  -- todo: check dcname is valid
+  -- todo: check dcmode is valid for dcname

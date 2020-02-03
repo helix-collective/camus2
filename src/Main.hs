@@ -40,18 +40,19 @@ main = do
     ["show-log"]                                -> runWithConfig       (C.showLog)
     ["show-default-nginx-config"]               -> C.showDefaultNginxConfig
     ["show-config-modes"]                       -> runWithConfig (C.listConfigsModes)
-    ["show-config-modes", dynamicConfigName]    -> runWithConfig (C.showConfigModes (T.pack dynamicConfigName))
+    ["show-config-modes", configName]           -> runWithConfig (C.showConfigModes (T.pack configName))
 
     ["fetch-context"]                           -> runWithConfigAndLog (U.fetchConfigContext Nothing)
     ["fetch-context","--retry"]                 -> runWithConfigAndLog (U.fetchConfigContext (Just 10))
     ["unpack", release, toDir]                  -> runWithConfigAndLog (U.unpackRelease id (T.pack release) toDir)
     ["expand-template", templatePath, destPath] -> runWithConfigAndLog (U.injectContext id templatePath destPath)
     ["aws-docker-login-cmd"]                    -> runWithConfigAndLog (C.awsDockerLoginCmd)
- 
+
     ["status"]                                  -> runWithConfig       (P.showStatus False)
     ["status", "--show-slaves"]                 -> runWithConfig       (P.showStatus True)
     ["start", release]                          -> runWithConfigAndLog (C.createAndStart (T.pack release) (T.pack release))
     ["start", release, asDeploy]                -> runWithConfigAndLog (C.createAndStart (T.pack release) (T.pack asDeploy))
+    ["reconfig", deploy, configName, configMode]-> runWithConfig       (C.reconfigDeploy (T.pack deploy) (T.pack configName) (T.pack configMode))
     ["stop", deploy]                            -> runWithConfigAndLog (C.stopDeploy (T.pack deploy))
     ["connect", endpoint, deploy]               -> runWithConfigAndLog (P.connect (T.pack endpoint) (T.pack deploy))
     ["disconnect", endpoint]                    -> runWithConfigAndLog (P.disconnect (T.pack endpoint))
@@ -168,6 +169,11 @@ usageText = "\
   \  c2 restart-frontend-proxy\n\
   \  c2 connect <endpoint> <deploy>\n\
   \  c2 disconnect <endpoint>\n\
+  \\n\
+  \Deployment Reconfiguration:\n\
+  \  c2 show-config-modes\n\
+  \  c2 show-config-modes <configName>\n\
+  \  c2 reconfig <deploy> <configName> <configMode>\n\
   \\n\
   \Deployment without a proxy:\n\
   \  c2 select <release>\n\
