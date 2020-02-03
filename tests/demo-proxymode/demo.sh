@@ -14,30 +14,9 @@ echo
 echo "./c2 start release-xx-yy-zz.zip:"
 ./c2 start release-xx-yy-zz.zip
 
-echo
-echo "./c2 show-config-modes"
-./c2 show-config-modes
-
-echo
-echo "./c2 show-config-modes queue"
-./c2 show-config-modes queue
-
-echo
-echo "./c2 show-config-modes processor"
-./c2 show-config-modes processor
-
-echo
-echo "./c2 show-config-modes frontend"
-./c2 show-config-modes frontend
-
-echo
-echo "./c2 status"
-./c2 status
+echo "./c2 reconfig release-xx-yy-zz.zip queue inactive"
+./c2 reconfig release-xx-yy-zz.zip queue inactive
 
 #echo
-#echo "./c2 reconfig release-xx-yy-zz.zip frontend offline"
-#./c2 reconfig release-xx-yy-zz.zip frontend offline
-
-echo
-echo "./c2 stop release-xx-yy-zz.zip:"
-./c2 stop release-xx-yy-zz.zip
+#e#cho "./c2 stop release-xx-yy-zz.zip:"
+#./c2 stop release-xx-yy-zz.zip

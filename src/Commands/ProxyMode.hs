@@ -26,7 +26,7 @@ import qualified Network.AWS.EC2.Metadata as EC2M
 import ADL.Config(EndPoint(..), EndPointType(..))
 import ADL.Core(adlFromJsonFile', adlToJsonFile)
 import ADL.Release(ReleaseConfig(..))
-import ADL.Config(ToolConfig(..), DeployMode(..), ProxyModeConfig(..), MachineLabel(..))
+import ADL.Config(ToolConfig(..), DeployMode(..), ProxyModeConfig(..), MachineLabel(..), DynamicJsonSource(..))
 import ADL.State(State(..), Deploy(..), SlaveState(..), SlaveStatus(..))
 import ADL.Types(DynamicConfigName, StringKeyMap, DynamicConfigMode, EndPointLabel, DeployLabel, ReleaseLabel)
 import Util(unpackRelease,fetchConfigContext, checkReleaseExists)
@@ -101,10 +101,9 @@ createAndStart release asDeploy = do
     tcfg <- getToolConfig
     state <- getState
     port <- liftIO $ allocatePort pm state
-    dcfgmodes <- return SM.empty
-    updateState (nextState (createDeploy port dcfgmodes))
+    updateState (nextState (createDeploy port))
   where
-    createDeploy port dcfgmodes = (CreateDeploy (Deploy asDeploy release port dcfgmodes))
+    createDeploy port = (CreateDeploy (Deploy asDeploy release port))
 
 -- | Stop and remove a deployment
 stopAndRemove :: T.Text -> IOR ()
@@ -154,22 +153,28 @@ reconfig deployLabel dcname dcmode = do
     tcfg <- getToolConfig
     state <- getState
     -- verify deployLabel
-    case SM.lookup deployLabel (s_deploys state) of
+    deploy <- case SM.lookup deployLabel (s_deploys state) of
       Nothing -> error (T.unpack ("no deploy called " <> deployLabel))
-      Just deploy -> return ()
+      Just deploy -> return deploy
 
     -- verify dcname
-    --case SM.lookup endPointLabel (pm_endPoints pm) of
-    --  Nothing -> error (T.unpack ("no endpoint called " <> endPointLabel))
-    --  Just endPoint -> return ()
+    djsource <- case SM.lookup dcname (tc_dynamicConfigSources tcfg) of
+      Nothing -> error (T.unpack ("no dynamic configName called " <> dcname))
+      Just djsource -> return djsource
 
     -- verify (dcname,dcmode)
-    --case SM.lookup endPointLabel (pm_endPoints pm) of
-    --  Nothing -> error (T.unpack ("no endpoint called " <> endPointLabel))
-    --  Just endPoint -> return ()
+    case SM.lookup dcmode (djsrc_modes djsource) of
+      Nothing -> error (T.unpack ("no dynamic configName " <> dcname <> " mode called " <> dcmode))
+      Just endPoint -> return ()
 
     -- updateState with details
-    -- updateState (\s -> s{s_connections=SM.insert endPointLabel deployLabel (s_connections s)})
+    updateState (\s -> s{s_dconfigs=SM.insert (d_label deploy) (
+      case SM.lookup (d_label deploy) (s_dconfigs s) of
+        Nothing -> SM.fromList [(dcname,dcmode)]
+        Just dccfgnamemode -> SM.insert dcname dcmode dccfgnamemode
+    ) (s_dconfigs s)})
+
+
 
 -- | Update local state to reflect the master state from S3
 slaveUpdate :: Maybe Int -> IOR ()

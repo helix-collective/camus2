@@ -1,8 +1,6 @@
 {
-    "templates" : [
-        "template.json.tpl"
-    ],
-    "prestartCommand" : "echo prestarting...",
-    "startCommand" : "touch foo",
-    "stopCommand" : "rm foo"
+    "prestartCommand": "",
+    "startCommand": "docker-compose up -d",
+    "stopCommand": "docker-compose stop && docker-compose rm -f && docker system prune -f",
+    "templates": ["docker-compose.yml.tpl","template.json.tpl"]
 }

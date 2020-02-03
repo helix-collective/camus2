@@ -23,6 +23,7 @@ executable c2
                      , ADL.Core.Value
                      , ADL.Core.StringMap
                      , ADL.Core.Nullable
+                     , ADL.Core.TypeToken
                      , ADL.Config
                      , ADL.Nginx
                      , ADL.Release

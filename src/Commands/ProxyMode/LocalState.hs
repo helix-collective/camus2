@@ -90,6 +90,8 @@ stateUpdateActions endPointMap oldState newState =
   -- Setup the endpoints (ie the nginx config?) if any have changed
   <> if newEndPoints /= oldEndPoints then [SetEndPoints newEndPoints] else []
 
+  -- TODO: Reconfig deploys with dynamic configs that have changed
+
   -- Finally, delete the remainind endpoints that are no longer required
   <> map DestroyDeploy deploysToDestroyLast
   where
@@ -151,6 +153,17 @@ executeAction (SetEndPoints liveEndPoints) = do
       maybeEndpoints eps liveEndPoints = [ (ep,findDeploy label) | (label,ep) <- SM.toList eps]
         where
           findDeploy label = fmap snd (find ((==label). fst . fst) liveEndPoints)
+
+executeAction (ReConfigDeploy d) = do
+  -- todo: refactor back with CreateDeploy (basically same but no execution)
+  -- todo: continue here ???
+  scopeInfo "execute ReConfigDeploy" $ do
+    tcfg <- getToolConfig
+    pm <- getProxyModeConfig
+    fetchConfigContext Nothing
+    let deployDir = T.unpack (tc_deploysDir tcfg) </> (takeBaseName (T.unpack (d_label d)))
+    liftIO $ createDirectoryIfMissing True deployDir
+    unpackRelease (contextWithLocalPorts pm (d_port d)) (d_release d) deployDir
 
 getState :: IOR State
 getState = do
