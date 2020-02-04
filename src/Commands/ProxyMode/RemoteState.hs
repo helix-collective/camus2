@@ -70,9 +70,7 @@ getSlaves remoteStateS3 = do
 
     -- extract label from ".../label/state.json"
     parseSlaveLabel :: T.Text -> Maybe T.Text
-    parseSlaveLabel key = case T.stripPrefix "/slaves/" key of
-      Nothing -> Nothing
-      (Just s) -> Just (T.takeWhileEnd (/='/') s)
+    parseSlaveLabel key = Just (fst ( T.breakOn (T.pack "/state.json") (snd (T.breakOnEnd (T.pack "/slaves/") key))))
 
 updateState :: S3Path -> (State -> State) -> IOR ()
 updateState remoteStateS3 modf = do
