@@ -21,11 +21,12 @@ data Deploy = Deploy
     { d_label :: ADL.Types.DeployLabel
     , d_release :: T.Text
     , d_port :: Data.Word.Word32
+    , d_dynamicConfigModes :: (ADL.Types.StringKeyMap ADL.Types.DynamicConfigName ADL.Types.DynamicConfigMode)
     }
     deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
 
 mkDeploy :: ADL.Types.DeployLabel -> T.Text -> Data.Word.Word32 -> Deploy
-mkDeploy label release port = Deploy label release port
+mkDeploy label release port = Deploy label release port (stringMapFromList [])
 
 instance AdlValue Deploy where
     atype _ = "state.Deploy"
@@ -34,12 +35,14 @@ instance AdlValue Deploy where
         [ genField "label" d_label
         , genField "release" d_release
         , genField "port" d_port
+        , genField "dynamicConfigModes" d_dynamicConfigModes
         ]
     
     jsonParser = Deploy
         <$> parseField "label"
         <*> parseField "release"
         <*> parseField "port"
+        <*> parseFieldDef "dynamicConfigModes" (stringMapFromList [])
 
 data SlaveState = SlaveState
     { slaveState_status :: SlaveStatus
@@ -89,12 +92,11 @@ instance AdlValue SlaveStatus where
 data State = State
     { s_deploys :: (ADL.Types.StringKeyMap ADL.Types.DeployLabel Deploy)
     , s_connections :: (ADL.Types.StringKeyMap ADL.Types.EndPointLabel ADL.Types.DeployLabel)
-    , s_dconfigs :: (ADL.Types.StringKeyMap ADL.Types.DeployLabel (ADL.Types.StringKeyMap ADL.Types.DynamicConfigName ADL.Types.DynamicConfigMode))
     }
     deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
 
 mkState :: (ADL.Types.StringKeyMap ADL.Types.DeployLabel Deploy) -> (ADL.Types.StringKeyMap ADL.Types.EndPointLabel ADL.Types.DeployLabel) -> State
-mkState deploys connections = State deploys connections (stringMapFromList [])
+mkState deploys connections = State deploys connections
 
 instance AdlValue State where
     atype _ = "state.State"
@@ -102,10 +104,8 @@ instance AdlValue State where
     jsonGen = genObject
         [ genField "deploys" s_deploys
         , genField "connections" s_connections
-        , genField "dconfigs" s_dconfigs
         ]
     
     jsonParser = State
         <$> parseField "deploys"
         <*> parseField "connections"
-        <*> parseFieldDef "dconfigs" (stringMapFromList [])

@@ -14,23 +14,15 @@ import qualified ADL.Core.StringMap as SM
 import qualified Data.Text as T
 import qualified ADL.Sys.Types as ST
 
-import ADL.Config(ToolConfig(..), DeployMode(..), ProxyModeConfig(..), DynamicConfigOptions(..), DynamicJsonSource(..), JsonSource(..))
-import ADL.Types(DynamicConfigName, StringKeyMap, DynamicConfigMode, DeployLabel, ReleaseLabel)
-import ADL.Release(ReleaseConfig(..))
-import ADL.Core(adlFromJsonFile')
+type X = (ADL.Types.StringKeyMap ADL.Types.DeployLabel (ADL.Types.StringKeyMap ADL.Types.DynamicConfigName ADL.Types.DynamicConfigMode))
 
-import Data.List(sortOn)
-import Data.Maybe(fromMaybe)
-import Data.Monoid
-import Data.Foldable(for_)
-import Data.Time.Clock.POSIX(getCurrentTime)
-import Data.Traversable(for)
-import Types(IOR, REnv(..), getToolConfig, scopeInfo)
-import Util(unpackRelease, fetchConfigContext, jsrcLabel)
-import Util.Aws(mkAwsEnv)
-import Commands.ProxyMode.LocalState(nginxConfTemplate)
+dconfigs_old = SM.fromList [ (T.pack "deployA", SM.fromList [(T.pack "name", T.pack "mode")]), (T.pack "deployB", SM.fromList [(T.pack "name", T.pack "mode")]) ]
+dconfigs_new = SM.fromList [ (T.pack "deployA", SM.fromList [(T.pack "name", T.pack "mode2")]), (T.pack "deployB", SM.fromList [(T.pack "name", T.pack "mode")]) ]
 
-type DynamicConfigSources = (StringKeyMap DynamicConfigName DynamicJsonSource)
+:{
+makepair :: kx -> ky -> (kx,ky)
+makepair x y = (x,y)
+:}
 
 :{
 demoFunc :: T.Text -> T.Text -> T.Text

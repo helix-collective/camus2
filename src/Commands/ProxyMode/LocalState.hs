@@ -42,6 +42,8 @@ import System.FilePath(takeBaseName, takeDirectory, dropExtension, replaceExtens
 import System.Process(callCommand)
 import Types(IOR, REnv(..), getToolConfig, scopeInfo, info)
 
+import Debug.Trace
+
 localState :: StateAccess
 localState = StateAccess {
   sa_get=getState,
@@ -74,6 +76,10 @@ updateState newStateFn = do
       liftIO $ adlToJsonFile stateFile (nextState action state)
 
 
+--deployReconfigActions :: State-> [Deploy] -> [StateAction]
+--deployReconfigActions newState deploysToReconfig =
+--  (catMaybes . map (\d -> (SM.lookup (d_label d) (s_dconfigs newState)) >>= (\m -> Just (ReConfigDeploy d m))  )) deploysToReconfig
+
 -- | Compute the difference between oldState and newState, and express this as a list
 -- of actions to update the old state
 stateUpdateActions :: M.Map EndPointLabel EndPoint -> State -> State -> [StateAction]
@@ -81,28 +87,55 @@ stateUpdateActions endPointMap oldState newState =
   -- First shut down deploys that occupy ports that we need for new deploys
      map DestroyDeploy deploysToDestroyFirst
 
+  <> trace ("oldState: " ++ show oldState) []
+  <> trace ("newState: " ++ show newState) []
+
   -- create all new endpoints
   <> map CreateDeploy deploysToCreate
+
+  -- Reconfig to newState those deploys whos dynamic configs have changed
+  -- <> deployReconfigActions newState deploysToReconfig
+  -- DEV: debug by reconfig all new deploys
+  -- <> deployReconfigActions newState (M.elems $ SM.toMap (s_deploys newState))
 
   -- update any deploys that have changed
   <> concatMap updateDeploy deploysToUpdate
 
+  -- reconfig any deploys that have changed dynamic configs
+  <> concatMap reconfigDeploy deploysToReConfig
+
   -- Setup the endpoints (ie the nginx config?) if any have changed
   <> if newEndPoints /= oldEndPoints then [SetEndPoints newEndPoints] else []
-
-  -- TODO: Reconfig deploys with dynamic configs that have changed
 
   -- Finally, delete the remainind endpoints that are no longer required
   <> map DestroyDeploy deploysToDestroyLast
   where
     oldDeploys = SM.toMap (s_deploys oldState)
     newDeploys = SM.toMap (s_deploys newState)
+
+    oldDeploysExDC = M.map (\d -> d{d_dynamicConfigModes=SM.empty}) oldDeploys
+    newDeploysExDC = M.map (\d -> d{d_dynamicConfigModes=SM.empty}) newDeploys
+
+    --oldDeploysDConfigs = SM.toMap (s_dconfigs oldState)
+    --newDeploysDConfigs = SM.toMap (s_dconfigs newState)
     oldEndPoints = (catMaybes . map (getEndpointDeploy endPointMap newState) . SM.toList) (s_connections oldState)
     newEndPoints = (catMaybes . map (getEndpointDeploy endPointMap newState) . SM.toList) (s_connections newState)
-    deploysToCreate = M.elems (M.difference newDeploys oldDeploys)
-    deploysToUpdate = filter (\(d1,d2) -> d1 /= d2) (M.elems (M.intersectionWith (\d1 d2 -> (d1,d2)) oldDeploys newDeploys))
-    (deploysToDestroyFirst,deploysToDestroyLast) = partition usesRequiredPort (M.elems (M.difference oldDeploys newDeploys))
+    deploysToCreate = M.elems (M.difference newDeploysExDC oldDeploysExDC)
+    deploysToUpdate = filter (\(d1,d2) -> d1 /= d2) (M.elems (M.intersectionWith (\d1 d2 -> (d1,d2)) oldDeploysExDC newDeploysExDC))
+
+    deploysToReConfig = filter (\(d1,d2) -> d1 /= d2) (M.elems (M.intersectionWith (\d1 d2 -> (d1,d2)) oldDeploys newDeploys))
+
+    --this is wrong - intersectoin with empty set gets empty without lookig at new
+    --should it populate the defaults in there already?? (or does that break backwards compatibility?)
+    --deployLabelsToReconfig = M.keys (M.filter (\(d1,d2) -> d1 /= d2 ) (M.intersectionWith (\d1 d2 -> (d1,d2)) (trace ("oldDeploysDConfigs: " ++ show oldDeploysDConfigs) oldDeploysDConfigs) (trace ("newDeploysDConfigs: " ++ show newDeploysDConfigs) newDeploysDConfigs)))
+
+    --deploysToReconfig = (catMaybes . map (flip SM.lookup (s_deploys newState))) ( trace ("deployLabelsToReconfig:" ++ show deployLabelsToReconfig) deployLabelsToReconfig)
+
+    (deploysToDestroyFirst,deploysToDestroyLast) = partition usesRequiredPort (M.elems (M.difference oldDeploysExDC newDeploysExDC))
+
     updateDeploy (d1,d2) = [DestroyDeploy d1, CreateDeploy d2]
+    reconfigDeploy (d1,d2) = [ReConfigDeploy d2]
+
     usesRequiredPort d = elem (d_port d) requiredPorts
     requiredPorts =map d_port (M.elems newDeploys)
 
@@ -155,8 +188,7 @@ executeAction (SetEndPoints liveEndPoints) = do
           findDeploy label = fmap snd (find ((==label). fst . fst) liveEndPoints)
 
 executeAction (ReConfigDeploy d) = do
-  -- todo: refactor back with CreateDeploy (basically same but no execution)
-  -- todo: continue here ???
+  -- todo: refactor back with CreateDeploy (basically same but no execution of start)
   scopeInfo "execute ReConfigDeploy" $ do
     tcfg <- getToolConfig
     pm <- getProxyModeConfig

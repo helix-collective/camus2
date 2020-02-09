@@ -92,6 +92,15 @@ showStatus showSlaves = do
             else d_label d <> " (" <> d_release d <> ")"
         T.putStrLn ("  " <> labeltext <> ": (localhost:" <> showText (d_port d) <> ")")
 
+type DConfigNameModeMap = (ADL.Types.StringKeyMap ADL.Types.DynamicConfigName ADL.Types.DynamicConfigMode)
+type DConfigNameJSrcMap = (ADL.Types.StringKeyMap ADL.Types.DynamicConfigName DynamicJsonSource)
+
+getDefaultDConfigModes :: DConfigNameJSrcMap -> DConfigNameModeMap
+getDefaultDConfigModes dynamicConfigSources = SM.fromList $ map (\(name,jsrc) -> (name,djsrc_defaultMode jsrc)) $ SM.toList dynamicConfigSources
+
+updateDConfigModes :: DConfigNameModeMap -> DConfigNameModeMap -> DConfigNameModeMap
+updateDConfigModes dcdefault dcupdate = SM.fromList $ M.toList $ M.union (SM.toMap dcupdate) (SM.toMap dcdefault)
+
 -- | Create and start a deployment (if it's not already running)
 createAndStart :: T.Text -> T.Text -> IOR ()
 createAndStart release asDeploy = do
@@ -101,9 +110,10 @@ createAndStart release asDeploy = do
     tcfg <- getToolConfig
     state <- getState
     port <- liftIO $ allocatePort pm state
-    updateState (nextState (createDeploy port))
+    dcfgmodes <- return $ getDefaultDConfigModes $ tc_dynamicConfigSources tcfg
+    updateState (nextState (createDeploy port dcfgmodes))
   where
-    createDeploy port = (CreateDeploy (Deploy asDeploy release port))
+    createDeploy port dcfgmodes = (CreateDeploy (Deploy asDeploy release port dcfgmodes))
 
 -- | Stop and remove a deployment
 stopAndRemove :: T.Text -> IOR ()
@@ -167,14 +177,12 @@ reconfig deployLabel dcname dcmode = do
       Nothing -> error (T.unpack ("no dynamic configName " <> dcname <> " mode called " <> dcmode))
       Just endPoint -> return ()
 
-    -- updateState with details
-    updateState (\s -> s{s_dconfigs=SM.insert (d_label deploy) (
-      case SM.lookup (d_label deploy) (s_dconfigs s) of
-        Nothing -> SM.fromList [(dcname,dcmode)]
-        Just dccfgnamemode -> SM.insert dcname dcmode dccfgnamemode
-    ) (s_dconfigs s)})
-
-
+    updateState $ nextState $ ReConfigDeploy deploy{d_dynamicConfigModes=
+      SM.fromList $
+        (SM.toList $ getDefaultDConfigModes $ tc_dynamicConfigSources tcfg)
+        <> (SM.toList $ d_dynamicConfigModes deploy)
+        <> [(dcname, dcmode)]
+    }
 
 -- | Update local state to reflect the master state from S3
 slaveUpdate :: Maybe Int -> IOR ()

@@ -15,7 +15,7 @@ echo "./c2 start release-xx-yy-zz.zip:"
 ./c2 start release-xx-yy-zz.zip
 
 echo "./c2 reconfig release-xx-yy-zz.zip queue inactive"
-./c2 reconfig release-xx-yy-zz.zip queue inactive
+./c2 reconfig release-xx-yy-zz.zip queue active
 
 #echo
 #e#cho "./c2 stop release-xx-yy-zz.zip:"

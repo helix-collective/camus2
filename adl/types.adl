@@ -26,4 +26,6 @@ type DynamicConfigName = ConfigName;
 /// Name of a mode of a dynamic config - eg 'active' 'inactive'
 type DynamicConfigMode = String;
 
+type DynamicConfigNameModeMap = StringKeyMap<DynamicConfigName, DynamicConfigMode>;
+
 };

@@ -18,10 +18,7 @@ struct State {
   // Connections between the configured endpoints and deployments
   StringKeyMap<EndPointLabel, DeployLabel> connections;
 
-  // Dynamic config modes of deploys
-  StringKeyMap<DeployLabel, StringKeyMap<DynamicConfigName, DynamicConfigMode> > dconfigs = {};
-
-  // See also emptyState
+  // Note: Default (empty) state is separately specified in Commands/ProxyMode/Types.hs emptyState
 };
 
 
@@ -50,6 +47,8 @@ struct Deploy {
   DeployLabel label;
   String release;
   Word32 port;
+
+  StringKeyMap<DynamicConfigName, DynamicConfigMode> dynamicConfigModes = {};
 };
 
 };

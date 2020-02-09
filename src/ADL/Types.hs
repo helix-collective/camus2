@@ -4,6 +4,7 @@ module ADL.Types(
     DeployLabel,
     DynamicConfigMode,
     DynamicConfigName,
+    DynamicConfigNameModeMap,
     EndPointLabel,
     FilePath,
     ReleaseLabel,
@@ -29,6 +30,8 @@ type DeployLabel = T.Text
 type DynamicConfigMode = T.Text
 
 type DynamicConfigName = ConfigName
+
+type DynamicConfigNameModeMap = (StringKeyMap DynamicConfigName DynamicConfigMode)
 
 type EndPointLabel = T.Text
 

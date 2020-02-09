@@ -23,7 +23,7 @@ import qualified Control.Monad.Trans.AWS as AWS
 import ADL.Config(ToolConfig(..), DeployMode(..), JsonSource(..), ProxyModeConfig(..))
 import ADL.Release(ReleaseConfig(..))
 import ADL.Core(adlFromJsonFile', runJsonParser, textFromParseContext, AdlValue(..), ParseResult(..))
-import ADL.Types(StaticConfigName)
+import ADL.Types(StaticConfigName, DynamicConfigNameModeMap)
 import Blobs(releaseBlobStore, BlobStore(..), BlobName)
 import Blobs(releaseBlobStore, BlobStore(..), BlobName)
 import Codec.Archive.Zip(withArchive, unpackInto)
