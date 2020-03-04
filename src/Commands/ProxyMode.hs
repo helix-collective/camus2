@@ -9,6 +9,7 @@ module Commands.ProxyMode(
   slaveUpdate,
   restartProxy,
   generateSslCertificate,
+  runningDeploys,
   ) where
 
 import qualified ADL.Core.StringMap as SM
@@ -118,6 +119,12 @@ stopAndRemove release = do
       Just (endpointLabel,_) -> error (T.unpack ("deploy is connected to " <> endpointLabel))
       Nothing -> return ()
     updateState (nextState (DestroyDeploy deploy))
+
+-- | Return the running deploy names
+runningDeploys :: IOR [T.Text]
+runningDeploys = do
+    state <- getState
+    return (map fst (SM.toList (s_deploys state)))
 
 -- | Connect an endpoint to a running deployment
 connect :: T.Text -> T.Text -> IOR ()

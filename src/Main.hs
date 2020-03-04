@@ -1,95 +1,278 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
+import qualified ADL.Core.StringMap as SM
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.Text.Lazy as LT;
 import qualified Data.ByteString.Char8 as CBS
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.HashMap.Strict as HM
 import qualified Commands.LetsEncrypt as LE
 import qualified Commands.ProxyMode as P
 import qualified Commands as C
 import qualified Util as U
 import qualified Log as L
 
-import ADL.Config(ToolConfig(..), LetsEncryptConfig(..), DeployMode(..))
+import ADL.Config(ToolConfig(..), LetsEncryptConfig(..), DeployMode(..), ProxyModeConfig(..))
 import ADL.Core(adlFromByteString, AdlValue)
+import Blobs(releaseBlobStore, BlobStore(..))
+import Commands.ProxyMode.LocalState(nginxConfTemplate)
 import Control.Exception(SomeException)
 import Control.Monad.Catch(finally,catch)
+import Control.Monad.IO.Class
 import Control.Monad.Reader(runReaderT)
+import Data.List(isPrefixOf)
 import Data.Monoid
+import Data.Semigroup ((<>))
+import Data.Version(showVersion)
 import HelpText(helpText)
-import Commands.ProxyMode.LocalState(nginxConfTemplate)
+import Options.Applicative
+import Paths_camus2(version)
 import System.Directory(doesFileExist)
 import System.Environment(getArgs, lookupEnv, getExecutablePath)
 import System.Exit(exitWith,ExitCode(..))
 import System.FilePath(takeDirectory, takeExtension, (</>))
 import System.Posix.Files(fileExist)
 import Types(REnv(..),IOR, getToolConfig)
-import Data.Version(showVersion)
-import Paths_camus2(version)
 import Util.Aws(mkAwsEnvFn0, AwsEnv)
+
+data Command
+  = Help
+  | ListReleases
+  | ShowLog
+  | Version
+  | ShowDefaultNginxConfig
+  | ShowConfigModes (Maybe T.Text)
+  | FetchContext (Maybe Int)
+  | UnpackRelease (T.Text,FilePath)
+  | ExpandTemplate (FilePath,FilePath)
+  | AwsDockerLoginCmd
+  | Status Bool
+  | Start (T.Text,Maybe T.Text)
+  | Stop T.Text
+  | Connect (T.Text,T.Text)
+  | Disconnect T.Text
+  | RestartFrontendProxy
+  | GenerateSslCertificate
+  | SlaveFlush
+  | SlaveUpdate (Maybe Int)
+  | LeGetCerts
+  | LeAuthHook
+  | LeCleanupHook
+
+commandParserInfo :: ParserInfo Command
+commandParserInfo = info (commandParser <**> helper) (
+    fullDesc
+    <> header "camus2 - a deployment management tool"
+  )
+
+commandParser :: Parser Command
+commandParser = subparser
+  (  command "help"
+     (info' (pure Help) "Show detailed program help")
+  <> command "list-releases"
+     (info' (pure ListReleases) "List available releases")
+  <> command "version"
+     (info' (pure Version) "Show program version")
+  <> command "show-log"
+     (info' (pure ShowLog) "Show the history of releases deployed via the start command.")
+  <> command "show-default-nginx-config"
+     (info' (pure ShowDefaultNginxConfig) "Outputs the default template for the nginx config.")
+  <> command "show-config-modes"
+     (info' showConfigParser "Show the available configuration modes.")
+  <> command "fetch-context"
+     (info' fetchContextParser "Downloads the environmental information files from infrastructure")
+  <> command "unpack"
+     (info' unpackParser "Unpack and configure the specified release into the given directory")
+  <> command "expand-template"
+     (info' expandTemplateParser "Injects the config contexts specified into a template")
+  <> command "aws-docker-login-cmd"
+     (info' (pure AwsDockerLoginCmd) "Runs the appropriate docker login command to access configured repositories")
+  <> command "status"
+     (info' statusParser "Show the proxy system status: specifically the endpoints and live deploys")
+  <> command "start"
+     (info' startParser "Create and start a deployment (if it's not already running)")
+  <> command "stop"
+     (info' stopParser "Stop and remove a deployment")
+  <> command "connect"
+     (info' connectParser "Connect an endpoint to a running deployment")
+  <> command "disconnect"
+     (info' disconnectParser "Disconnect an endpoint")
+  <> command "restart-frontend-proxy"
+     (info' (pure RestartFrontendProxy) "Restart the nginx frontend proxy")
+  <> command "generate-ssl-certificate"
+     (info' (pure GenerateSslCertificate) "Generate an ssl certificate using the http-01 challenge")
+  <> command "slave-flush"
+     (info' (pure SlaveFlush) "Remove old slave state records from S3")
+  <> command "slave-update"
+     (info' slaveUpdateParser "If in slave mode, fetch the master state from S3 and update local state to match")
+  <> command "le-get-certs"
+     (info' (pure LeGetCerts) "(internal helper for generate-ssl-certificate)")
+  <> command "le-auth-hook"
+     (info' (pure LeAuthHook) "(internal helper for generate-ssl-certificate)")
+  <> command "le-cleanup-hook"
+     (info' (pure LeCleanupHook) "(internal helper for generate-ssl-certificate)")
+  )
+
+showConfigParser :: Parser Command
+showConfigParser = ShowConfigModes <$> (Just <$> dynConfigName <|> pure Nothing)
+ where
+   dynConfigName :: Parser T.Text
+   dynConfigName = argument str (metavar "DYN_CONFIG_NAME")
+
+fetchContextParser :: Parser Command
+fetchContextParser = FetchContext <$> retryFlag
+ where
+   retryFlag :: Parser (Maybe Int)
+   retryFlag = flag Nothing (Just 10)
+     (  long "retry"
+     <> help "retry if sources unavailable"
+     )
+
+unpackParser :: Parser Command
+unpackParser = UnpackRelease <$> arguments
+ where
+   arguments = (,) <$> releaseArgument <*> directoryArgument "TODIR"
+
+expandTemplateParser :: Parser Command
+expandTemplateParser = ExpandTemplate <$> arguments
+ where
+   arguments = (,) <$> fileArgument "TEMPLATE" <*> fileArgument "OUTFILE"
+
+statusParser :: Parser Command
+statusParser = Status <$> showSlaves
+ where
+   showSlaves :: Parser Bool
+   showSlaves = flag False True
+     (  long "show-slaves"
+     <> help "include per slave status"
+     )
+
+startParser :: Parser Command
+startParser = Start <$> arguments
+ where
+   arguments = (,) <$> releaseArgument <*> (Just <$> asDeploy <|> pure Nothing)
+   asDeploy = argument str (metavar "ASDEPLOY")
+
+stopParser :: Parser Command
+stopParser = Stop <$> deployArgument
+
+connectParser :: Parser Command
+connectParser = Connect <$> arguments
+ where
+   arguments = (,) <$> endpointArgument <*> deployArgument
+
+disconnectParser :: Parser Command
+disconnectParser = Disconnect <$> endpointArgument
+
+slaveUpdateParser :: Parser Command
+slaveUpdateParser = SlaveUpdate <$> (Just <$> repeatOption <|> pure Nothing)
+ where
+   repeatOption :: Parser Int
+   repeatOption = option auto
+     (  long "repeat"
+     <> metavar "SECS"
+     <> help "run forever, repeating with specifed period"
+     )
+
+directoryArgument :: String -> Parser FilePath
+directoryArgument var = argument str
+  (  metavar var
+  <> action "directory"  -- bash completion on directories
+  )
+
+fileArgument :: String -> Parser FilePath
+fileArgument var = argument str
+  (  metavar var
+  <> action "file"  -- bash completion on files
+  )
+
+releaseArgument :: Parser T.Text
+releaseArgument = argument str
+  (  metavar "RELEASE"
+  <> completer (mkCompleter completeAvailableReleases)
+  )
+
+deployArgument :: Parser T.Text
+deployArgument = argument str
+  (  metavar "DEPLOY"
+  <> completer (mkCompleter completeRunningDeploys)
+  )
+
+endpointArgument :: Parser T.Text
+endpointArgument = argument str
+  (  metavar "ENDPOINT"
+  <> completer (mkCompleter completeConfiguredEndpoints)
+  )
+
+info' :: Parser a -> String -> ParserInfo a
+info' p desc = info (helper <*> p) (fullDesc <> progDesc desc)
 
 main :: IO ()
 main = do
-  args <- getArgs
-  case args of
-    ["help"]                                    -> help
-    ["--version"]                               -> putStrLn (showVersion version)
-    ["list-releases"]                           -> runWithConfig       (C.listReleases)
-    ["show-log"]                                -> runWithConfig       (C.showLog)
-    ["show-default-nginx-config"]               -> C.showDefaultNginxConfig
-    ["show-config-modes"]                       -> runWithConfig (C.listConfigsModes)
-    ["show-config-modes", dynamicConfigName]    -> runWithConfig (C.showConfigModes (T.pack dynamicConfigName))
+   cmd <- execParser commandParserInfo
+   runCommand cmd
 
-    ["fetch-context"]                           -> runWithConfigAndLog (U.fetchConfigContext Nothing)
-    ["fetch-context","--retry"]                 -> runWithConfigAndLog (U.fetchConfigContext (Just 10))
-    ["unpack", release, toDir]                  -> runWithConfigAndLog (U.unpackRelease id (T.pack release) toDir)
-    ["expand-template", templatePath, destPath] -> runWithConfigAndLog (U.injectContext id templatePath destPath)
-    ["aws-docker-login-cmd"]                    -> runWithConfigAndLog (C.awsDockerLoginCmd)
- 
-    ["status"]                                  -> runWithConfig       (P.showStatus False)
-    ["status", "--show-slaves"]                 -> runWithConfig       (P.showStatus True)
-    ["start", release]                          -> runWithConfigAndLog (C.createAndStart (T.pack release) (T.pack release))
-    ["start", release, asDeploy]                -> runWithConfigAndLog (C.createAndStart (T.pack release) (T.pack asDeploy))
-    ["stop", deploy]                            -> runWithConfigAndLog (C.stopDeploy (T.pack deploy))
-    ["connect", endpoint, deploy]               -> runWithConfigAndLog (P.connect (T.pack endpoint) (T.pack deploy))
-    ["disconnect", endpoint]                    -> runWithConfigAndLog (P.disconnect (T.pack endpoint))
-    ["restart-frontend-proxy"]                  -> runWithConfigAndLog (P.restartProxy)
-    ["generate-ssl-certificate"]                -> runWithConfigAndLog (P.generateSslCertificate)
-    ["slave-flush"]                             -> runWithConfigAndLog (P.slaveFlush)
-    ["slave-update"]                            -> runWithConfigAndLog (P.slaveUpdate Nothing)
-    ["slave-update", "--repeat", ssecs]         -> do
-      secs <- readCheck ssecs
-      runWithConfigAndLog (P.slaveUpdate (Just secs))
+runCommand :: Command -> IO ()
+runCommand Help = helpCmd
+runCommand Version = putStrLn (showVersion version)
+runCommand ListReleases = runWithConfig (C.listReleases)
+runCommand ShowLog = runWithConfig (C.showLog)
+runCommand ShowDefaultNginxConfig = C.showDefaultNginxConfig
+runCommand (ShowConfigModes Nothing) = runWithConfig (C.listConfigsModes)
+runCommand (ShowConfigModes (Just dynamicConfigName)) = runWithConfig (C.showConfigModes dynamicConfigName)
+runCommand (FetchContext retry) = runWithConfigAndLog (U.fetchConfigContext retry)
+runCommand (UnpackRelease (release,toDir)) = runWithConfigAndLog (U.unpackRelease id release toDir)
+runCommand (ExpandTemplate (templatePath,destPath)) = runWithConfigAndLog (U.injectContext id templatePath destPath)
+runCommand AwsDockerLoginCmd = runWithConfigAndLog (C.awsDockerLoginCmd)
+runCommand (Status showSlaves) = runWithConfig (P.showStatus showSlaves)
+runCommand (Start (release,Nothing)) = runWithConfigAndLog (C.createAndStart release release)
+runCommand (Start (release,Just asDeploy)) = runWithConfigAndLog (C.createAndStart release asDeploy)
+runCommand (Stop deploy) = runWithConfigAndLog (C.stopDeploy deploy)
+runCommand (Connect (endpoint,deploy)) = runWithConfigAndLog (P.connect endpoint deploy)
+runCommand (Disconnect endpoint) = runWithConfigAndLog (P.disconnect endpoint)
+runCommand RestartFrontendProxy = runWithConfigAndLog (P.restartProxy)
+runCommand GenerateSslCertificate = runWithConfigAndLog (P.generateSslCertificate)
+runCommand SlaveFlush = runWithConfigAndLog (P.slaveFlush)
+runCommand (SlaveUpdate repeat) = runWithConfigAndLog (P.slaveUpdate repeat)
+runCommand LeGetCerts = getLetsEncryptConfig >>= LE.getCerts
+runCommand LeAuthHook = getLetsEncryptConfig >>= LE.authHook
+runCommand LeCleanupHook = getLetsEncryptConfig >>= LE.cleanupHook
 
-    ["le-get-certs"] -> do
-      config <- getLetsEncryptConfig
-      LE.getCerts config
-    ["le-auth-hook"] -> do
-      config <- getLetsEncryptConfig
-      LE.authHook config
-    ["le-cleanup-hook"] -> do
-      config <- getLetsEncryptConfig
-      LE.cleanupHook config
-    _ -> do
-      usage
-      exitWith (ExitFailure 10)
+-- Function called to bash complete releases
+completeAvailableReleases :: String -> IO [String]
+completeAvailableReleases prefix = evalWithConfig $ do
+  bs <- releaseBlobStore
+  names <- liftIO $ bs_namesWithPrefix bs (T.pack prefix)
+  return (map T.unpack names)
 
+-- Function called to bash complete live deploys
+completeRunningDeploys :: String -> IO [String]
+completeRunningDeploys prefix = evalWithConfig $ do
+  runningDeploys <- P.runningDeploys
+  return (filter (isPrefixOf prefix) (map T.unpack runningDeploys))
 
-usage :: IO ()
-usage = do
-  T.putStrLn usageText
+-- Function called to bash complete live deploys
+completeConfiguredEndpoints :: String -> IO [String]
+completeConfiguredEndpoints prefix = evalWithConfig $ do
+   tcfg <- getToolConfig
+   case tc_deployMode tcfg of
+     DeployMode_proxy pm -> do
+       let endpoints = map (T.unpack . fst) (SM.toList (pm_endPoints pm))
+       return (filter (isPrefixOf prefix) endpoints)
+     _ -> return []
 
-help :: IO ()
-help = do
+helpCmd :: IO ()
+helpCmd = do
   CBS.putStrLn helpText
 
-
-readCheck :: (Read a) => String -> IO a
-readCheck s = case reads s of
-  [(a,"")] -> return a
-  _ -> error ("unable to parse: " <> s)
+-- | Load the config file and evaluate the action
+evalWithConfig :: IOR a -> IO a
+evalWithConfig ma = do
+  tcfg <- loadToolConfig
+  let logger = L.logger (L.logStdout L.Info)
+  runReaderT ma (REnv tcfg logger)
 
 -- | Load the config file and run the action
 runWithConfig :: IOR () -> IO ()
@@ -152,37 +335,3 @@ getConfig envVarName prefixPaths = do
       ".json" -> adlFromByteString lbs
       ".yaml" -> U.adlFromYamlByteString lbs
       _ -> error ("Unknown file type for config file: " <> configPath <> " (expected .json or .yaml)")
-
-usageText :: T.Text
-usageText = "\
-  \General Usage:\n\
-  \  c2 help\n\
-  \  c2 list-releases\n\
-  \  c2 show-log\n\
-  \  c2 --version\n\
-  \\n\
-  \Deployment with a proxy:\n\
-  \  c2 status [--show-slaves]\n\
-  \  c2 start <release> [<asdeploy>]\n\
-  \  c2 stop <deploy>\n\
-  \  c2 restart-frontend-proxy\n\
-  \  c2 connect <endpoint> <deploy>\n\
-  \  c2 disconnect <endpoint>\n\
-  \\n\
-  \Deployment without a proxy:\n\
-  \  c2 select <release>\n\
-  \\n\
-  \Plumbing/Low Level Operations:\n\
-  \  c2 fetch-context [--retry]\n\
-  \  c2 unpack <release> <todir>\n\
-  \  c2 expand-template <templatePath> <destPath>\n\
-  \  c2 show-default-nginx-config\n\
-  \  c2 aws-docker-login-cmd\n\
-  \  c2 generate-ssl-certificate\n\
-  \  c2 slave-flush\n\
-  \  c2 slave-update [--repeat n]\n\
-  \\n\
-  \The config file is read from the file specified with CAMUS2_CONFIG.\n\
-  \It defaults to ../etc/camus2.(json|yaml) relative to the executable.\n\
-  \It is allowed to be an s3 path (ie s3://bucket/path).\n\
-  \"
