@@ -6,6 +6,7 @@ import qualified Util.Aws as AWS
 import qualified Util.Aws.S3 as S3
 
 import ADL.Config(ToolConfig(..), BlobStoreConfig(..))
+import Control.Monad.IO.Class
 import Data.Monoid
 import Data.Traversable(for)
 import Types(IOR, getToolConfig)
@@ -17,6 +18,7 @@ type BlobName = T.Text
 data BlobStore = BlobStore {
   bs_label :: T.Text,
   bs_names :: IO [BlobName],
+  bs_namesWithPrefix :: BlobName -> IO [BlobName],
   bs_exists :: BlobName -> IO Bool,
   bs_fetchToFile :: BlobName -> FilePath -> IO ()
 }
@@ -35,7 +37,7 @@ createBlobStore (BlobStoreConfig_localdir dirpath)  = localBlobStore (T.unpack d
 awsBlobStore :: S3Path -> IOR BlobStore
 awsBlobStore s3Path = do
   env <- AWS.mkAwsEnv
-  return (BlobStore s3Path (bs_names env) (bs_exists env) (bs_fetchToFile env))
+  return (BlobStore s3Path (bs_names env) (bs_namesWithPrefix env) (bs_exists env) (bs_fetchToFile env))
   where
     (bucketName,objectPrefix) = S3.splitPath s3Path
     objectKey blobname = S3.extendObjectKey objectPrefix ("/" <> blobname)
@@ -44,16 +46,20 @@ awsBlobStore s3Path = do
       keysAndNames <- S3.listObjectsPrefixesAndNames env bucketName objectPrefix
       return (map snd keysAndNames)
 
+    bs_namesWithPrefix env prefix = do
+      let objectPrefix' = S3.extendObjectKey objectPrefix ("/" <> prefix)
+      keysAndNames <- S3.listObjectsPrefixesAndNames env bucketName objectPrefix'
+      return (map snd keysAndNames)
+
     bs_exists env blobname = do
       S3.objectExists env bucketName (objectKey blobname)
 
     bs_fetchToFile env blobname filepath = do
       S3.downloadFileFrom env bucketName (objectKey blobname)  filepath Nothing
 
-
 localBlobStore :: FilePath -> IOR BlobStore
 localBlobStore path =
-  return (BlobStore (T.pack path) bs_names bs_exists bs_fetchToFile)
+  return (BlobStore (T.pack path) bs_names bs_namesWithPrefix bs_exists  bs_fetchToFile)
   where
     bs_names = do
       names <- listDirectory path
@@ -61,6 +67,10 @@ localBlobStore path =
         e <- doesFileExist (path </> name)
         return (name,e)
       return [ T.pack name | (name,True) <- existing]
+
+    bs_namesWithPrefix prefix = do
+      names <- bs_names
+      return (filter (T.isPrefixOf prefix) names)
 
     bs_exists name = do
       doesFileExist (path </> T.unpack name)
