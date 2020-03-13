@@ -1,5 +1,5 @@
 name:                camus2
-version:             0.15.4
+version:             0.15.5
 synopsis:            Tool to facilitate unpacking and configuring helix software releases
 -- description:
 homepage:
@@ -7,7 +7,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Tim Docker
 maintainer:          timd@helixta.com.au
-copyright:           2017 Helix
+copyright:           2020 Helix
 category:            Web
 build-type:          Simple
 cabal-version:       >=1.10
