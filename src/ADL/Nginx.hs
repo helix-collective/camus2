@@ -19,12 +19,12 @@ import qualified Data.Word
 import qualified Prelude
 
 data NginxConfContext = NginxConfContext
-    { ncc_healthCheck :: ADL.Core.Nullable.Nullable (NginxHealthCheck)
+    { ncc_healthCheck :: (ADL.Core.Nullable.Nullable NginxHealthCheck)
     , ncc_endPoints :: [NginxEndPoint]
     }
     deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
 
-mkNginxConfContext :: ADL.Core.Nullable.Nullable (NginxHealthCheck) -> [NginxEndPoint] -> NginxConfContext
+mkNginxConfContext :: (ADL.Core.Nullable.Nullable NginxHealthCheck) -> [NginxEndPoint] -> NginxConfContext
 mkNginxConfContext healthCheck endPoints = NginxConfContext healthCheck endPoints
 
 instance AdlValue NginxConfContext where
@@ -83,11 +83,11 @@ instance AdlValue NginxHealthCheck where
 
 data NginxHttpEndPoint = NginxHttpEndPoint
     { nhe_serverNames :: T.Text
-    , nhe_port :: ADL.Core.Nullable.Nullable (Data.Word.Word32)
+    , nhe_port :: (ADL.Core.Nullable.Nullable Data.Word.Word32)
     }
     deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
 
-mkNginxHttpEndPoint :: T.Text -> ADL.Core.Nullable.Nullable (Data.Word.Word32) -> NginxHttpEndPoint
+mkNginxHttpEndPoint :: T.Text -> (ADL.Core.Nullable.Nullable Data.Word.Word32) -> NginxHttpEndPoint
 mkNginxHttpEndPoint serverNames port = NginxHttpEndPoint serverNames port
 
 instance AdlValue NginxHttpEndPoint where
@@ -104,14 +104,14 @@ instance AdlValue NginxHttpEndPoint where
 
 data NginxHttpsEndPoint = NginxHttpsEndPoint
     { nhse_serverNames :: T.Text
-    , nhse_sslCertPath :: ADL.Core.Nullable.Nullable (T.Text)
-    , nhse_sslCertKeyPath :: ADL.Core.Nullable.Nullable (T.Text)
+    , nhse_sslCertPath :: (ADL.Core.Nullable.Nullable T.Text)
+    , nhse_sslCertKeyPath :: (ADL.Core.Nullable.Nullable T.Text)
     , nhse_letsencryptWwwDir :: T.Text
-    , nhse_port :: ADL.Core.Nullable.Nullable (Data.Word.Word32)
+    , nhse_port :: (ADL.Core.Nullable.Nullable Data.Word.Word32)
     }
     deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
 
-mkNginxHttpsEndPoint :: T.Text -> ADL.Core.Nullable.Nullable (T.Text) -> ADL.Core.Nullable.Nullable (T.Text) -> T.Text -> ADL.Core.Nullable.Nullable (Data.Word.Word32) -> NginxHttpsEndPoint
+mkNginxHttpsEndPoint :: T.Text -> (ADL.Core.Nullable.Nullable T.Text) -> (ADL.Core.Nullable.Nullable T.Text) -> T.Text -> (ADL.Core.Nullable.Nullable Data.Word.Word32) -> NginxHttpsEndPoint
 mkNginxHttpsEndPoint serverNames sslCertPath sslCertKeyPath letsencryptWwwDir port = NginxHttpsEndPoint serverNames sslCertPath sslCertKeyPath letsencryptWwwDir port
 
 instance AdlValue NginxHttpsEndPoint where

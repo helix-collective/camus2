@@ -1,0 +1,41 @@
+#!/bin/bash
+# Run a command or script inside a docker container with the
+# helix adl tooling.
+#
+#  Leaves a detached container running for efficient subsequent startup.
+# It's safe to stop/rm this container at any time.
+#
+#
+
+# If ADLMOUNTDIR is not set, then assume $HOME
+ADLMOUNTDIR=${ADLMOUNTDIR:-$HOME}
+
+IMAGE=helixta/hxadl
+VERSION=0.31.1
+
+CONTAINER_NAME=hxadl-$VERSION
+DOCKER_USER=$(id -u):$(id -g)
+
+if [ $# == 0 ]; then
+  echo "Usage: $0 <cmd>"
+  exit 1
+fi
+
+# Start detached container if it's not alreay running
+CID=$(docker ps -q -f status=running -f name=^/${CONTAINER_NAME}$)
+if [ ! "${CID}" ]; then
+  echo "Starting environment container" $CONTAINER_NAME
+  docker run -d \
+    --name $CONTAINER_NAME \
+    --rm \
+    --volume $ADLMOUNTDIR:$ADLMOUNTDIR \
+    --volume /etc/passwd:/etc/passwd \
+    --volume /etc/group:/etc/group \
+    --user $DOCKER_USER \
+    --workdir $(pwd) \
+    $IMAGE:$VERSION \
+    sleep infinity
+fi
+
+# Run the user command within it
+docker exec --user $DOCKER_USER $CONTAINER_NAME "$@"
