@@ -1,0 +1,12 @@
+{
+  "name": "camus2-test",
+  "version": "1.0.0",
+  "description": "Tests for Camus2",
+  "main": "index.js",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "ts-jest": "^25.3.1",
+    "typescript": "^3.8.3"
+  }
+}
