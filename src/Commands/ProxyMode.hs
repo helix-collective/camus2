@@ -8,6 +8,7 @@ module Commands.ProxyMode(
   slaveFlush,
   slaveUpdate,
   restartProxy,
+  shutdownProxy,
   generateSslCertificate,
   runningDeploys,
   ) where
@@ -31,7 +32,7 @@ import ADL.State(State(..), Deploy(..), SlaveState(..), SlaveStatus(..))
 import ADL.Types(EndPointLabel, DeployLabel)
 import Util(unpackRelease,fetchConfigContext, checkReleaseExists)
 import Commands.ProxyMode.Types
-import Commands.ProxyMode.LocalState(localState, restartLocalProxy, generateLocalSslCertificate)
+import Commands.ProxyMode.LocalState(localState, restartLocalProxy, shutdownLocalProxy, generateLocalSslCertificate)
 import Commands.ProxyMode.RemoteState(remoteState, writeSlaveState, masterS3Path, flushSlaveStates)
 import Control.Concurrent(threadDelay)
 import Control.Exception(throwIO, SomeException)
@@ -251,6 +252,13 @@ restartProxy = do
   pm <- getProxyModeConfig
   case pm_remoteStateS3 pm of
     Nothing -> restartLocalProxy
+    _ -> return ()
+
+shutdownProxy :: IOR ()
+shutdownProxy = do
+  pm <- getProxyModeConfig
+  case pm_remoteStateS3 pm of
+    Nothing -> shutdownLocalProxy
     _ -> return ()
 
 generateSslCertificate :: IOR ()

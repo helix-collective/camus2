@@ -54,6 +54,7 @@ data Command
   | Connect (T.Text,T.Text)
   | Disconnect T.Text
   | RestartFrontendProxy
+  | ShutdownFrontendProxy
   | GenerateSslCertificate
   | SlaveFlush
   | SlaveUpdate (Maybe Int)
@@ -101,6 +102,8 @@ commandParser = subparser
      (info' disconnectParser "Disconnect an endpoint")
   <> command "restart-frontend-proxy"
      (info' (pure RestartFrontendProxy) "Restart the nginx frontend proxy")
+   <> command "shutdown-frontend-proxy"
+     (info' (pure ShutdownFrontendProxy) "Shutdown the nginx frontend proxy")
   <> command "generate-ssl-certificate"
      (info' (pure GenerateSslCertificate) "Generate an ssl certificate using the http-01 challenge")
   <> command "slave-flush"
@@ -233,6 +236,7 @@ runCommand (Stop deploy) = runWithConfigAndLog (C.stopDeploy deploy)
 runCommand (Connect (endpoint,deploy)) = runWithConfigAndLog (P.connect endpoint deploy)
 runCommand (Disconnect endpoint) = runWithConfigAndLog (P.disconnect endpoint)
 runCommand RestartFrontendProxy = runWithConfigAndLog (P.restartProxy)
+runCommand ShutdownFrontendProxy = runWithConfigAndLog (P.shutdownProxy)
 runCommand GenerateSslCertificate = runWithConfigAndLog (P.generateSslCertificate)
 runCommand SlaveFlush = runWithConfigAndLog (P.slaveFlush)
 runCommand (SlaveUpdate repeat) = runWithConfigAndLog (P.slaveUpdate repeat)
