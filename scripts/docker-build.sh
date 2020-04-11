@@ -15,4 +15,4 @@ cp $EXE $TARGET
 gzip -f $TARGET
 echo "Binary written to $TARGET.gz"
 
-cp $EXE ${ROOT}/tests/
+cp $EXE ${ROOT}/test
