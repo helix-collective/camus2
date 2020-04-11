@@ -7,5 +7,8 @@ module.exports = {
   setupFilesAfterEnv: [
     '<rootDir>/setup.ts'
   ],
+
+  // act as node - otherwise assumes browser which means HTTP requests have to obey CORS etc
+  testEnvironment: "node"
 };
 

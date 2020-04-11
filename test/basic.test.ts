@@ -12,8 +12,8 @@ import {
   tearDownTest,
   zipAddReleaseJson,
   writeReleaseZip,
-  C2Exec,
 } from "./testUtils";
+import { C2Exec } from "./C2Exec";
 
 /// Trivial release wit no contents except the release.json - actions just touch files
 function makeRelease(setup: TestSetup) : JSZip {
@@ -41,11 +41,12 @@ for(const remoteMode of ["local","remote"] as const) {
   describe(`Run remote mode ${remoteMode}`, ()=>{
 
     const testSetup: TestSetup = {
+      randomstr: uuid(),
       dataDirs: null,
       mode: remoteMode
     };
     beforeEach(async () => {
-      await setupTest(`basic-${remoteMode}`, uuid(), testSetup);
+      await setupTest(`basic-${remoteMode}`, testSetup);
     });
     afterEach(async () => {
       await tearDownTest(testSetup);
@@ -55,9 +56,9 @@ for(const remoteMode of ["local","remote"] as const) {
       const dataDirs = testSetup.dataDirs!;
       await writeReleaseZip(testSetup, makeRelease(testSetup));
 
-      await writeToolConfig(testSetup, makeConfig(testSetup));
+      await writeToolConfig(testSetup, makeConfig(testSetup), 'single');
 
-      const c2 = new C2Exec(dataDirs);
+      const c2 = new C2Exec(dataDirs,'single');
 
       await c2.start("release.zip");
       expect(await fsx.pathExists(path.join(dataDirs.machineOptDeploys,"release","prestarted")));

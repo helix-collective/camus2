@@ -33,6 +33,7 @@ export type TestDataPaths = {
   }
 };
 export type TestSetup = {
+  randomstr: string;
   dataDirs: TestDataPaths|null;
   mode: "local"|"remote"
 };
@@ -48,7 +49,7 @@ export async function makeTestDataDirs(dataDirs: TestDataPaths) : Promise<void> 
   await Promise.all(dataDirs.mkdirs.map(d => fsx.mkdirp(d)));
 }
 
-const localstack : {
+export const localstack : {
   dockerCompose: ChildProcess|null;
   s3 : AWS.S3 | null;
   bucket: string;
@@ -58,9 +59,9 @@ const localstack : {
 } = {
   dockerCompose: null,
   s3: null,
-  bucket: "mockS3Bucket",
+  bucket: "mocks3Bucket", // use lowercase
   prefix: "some/path/in/mock/bucket",
-  port: 4566,    // default port for localstack (also exposed out in docker-compose.yml)
+  port: 4572,    // default port for localstack s3 (also exposed out in docker-compose.yml)
   host: "localhost"
 };
 
@@ -110,7 +111,7 @@ export function makeTestDataParams(name: string, randomstr: string, mode: "local
       logFile: path.join(machineOpt,'camus2.log'),
       releases: (mode === 'local') ?
         makeBlobStoreConfig('localdir', mockS3Releases) :
-        makeBlobStoreConfig('s3', localstack.bucket + "/" + localstack.prefix)
+        makeBlobStoreConfig('s3', "s3://" + localstack.bucket + "/" + localstack.prefix)
     },
     mockS3,
     mockS3Configs,
@@ -131,15 +132,21 @@ export async function execShellCommand(cmd: string, options: ExecOptions = {}) :
           stderr,
         });
       }
+      console.log(stdout);
       resolve();
     });
   });
 }
 
-export async function writeToolConfig(setup: TestSetup, toolConfig: ToolConfig) : Promise<void> {
+export async function writeToolConfig(setup: TestSetup, toolConfig: ToolConfig, mode:"single"|"controller"|"target") : Promise<void> {
   const jsonBinding = createJsonBinding(RESOLVER, texprToolConfig());
-  await fsx.writeJSON(path.join(setup.dataDirs!.machineOptEtc,'camus2.json'), jsonBinding.toJson(toolConfig));
-  await fsx.writeJSON(path.join(setup.dataDirs!.controllerOptEtc,'camus2.json'), jsonBinding.toJson(toolConfig));
+
+  if(mode==='single' || mode==='target') {
+    await fsx.writeJSON(path.join(setup.dataDirs!.machineOptEtc,'camus2.json'), jsonBinding.toJson(toolConfig));
+  }
+  if(mode==='controller') {
+    await fsx.writeJSON(path.join(setup.dataDirs!.controllerOptEtc,'camus2.json'), jsonBinding.toJson(toolConfig));
+  }
 }
 
 
@@ -152,10 +159,8 @@ export async function sleep(delay: number) {
 
 export function useLocalStack() {
   beforeAll(async ()=>{
+    console.log('starting localstack');
     localstack.dockerCompose = spawn('docker-compose', ['up'], {detached:true, cwd: path.join(__dirname, 'localstack')});
-
-    // takes a while to come up
-    await sleep(3000);
 
     localstack.s3 = new AWS.S3({endpoint: `http://${localstack.host}:${localstack.port}`});
     await retry(async function (retry, number) {
@@ -168,6 +173,8 @@ export function useLocalStack() {
         return retry(error);
       }
     });
+
+    console.log('started localstack');
   });
   afterAll(async ()=>{
     // kill and wait for exit
@@ -177,20 +184,16 @@ export function useLocalStack() {
       }),
       localstack.dockerCompose?.kill()
     ])
+    console.log('uselocalstack after all done')
   });
 }
 
 export async function setupTest(
   name: string,
-  randomstr: string,
   testSetup: TestSetup
 ): Promise<void> {
 
-  if(testSetup.mode ==='remote') {
-    process.env['S3_ENDPOINT'] = `http://${localstack.host}:${localstack.port}`;
-  }
-
-  testSetup.dataDirs = makeTestDataParams(name, randomstr, testSetup.mode);
+  testSetup.dataDirs = makeTestDataParams(name, testSetup.randomstr, testSetup.mode);
   await makeTestDataDirs(testSetup.dataDirs);
   await installC2Binary(testSetup.dataDirs);
 }
@@ -203,6 +206,7 @@ export async function tearDownTest(
       await fsx.remove(testSetup.dataDirs.workdir);
     }
   }
+  console.log('tearDownTest done');
 }
 
 export function zipAddReleaseJson(zip: JSZip, releaseConfig: ReleaseConfig) {
@@ -211,6 +215,7 @@ export function zipAddReleaseJson(zip: JSZip, releaseConfig: ReleaseConfig) {
 }
 
 export async function writeReleaseZip(setup: TestSetup, zip: JSZip, name="release.zip") : Promise<void> {
+  console.log('start save releasezip', name);
   let dest = path.join(setup.dataDirs!.config.releases.value, name);
 
   if(setup.mode === 'remote') {
@@ -225,39 +230,16 @@ export async function writeReleaseZip(setup: TestSetup, zip: JSZip, name="releas
   );
 
   if(setup.mode === 'remote') {
+
+
     await localstack.s3!.putObject({
-      Key: "some/path",
-      Bucket:'mockS3bucket',
+      Key: localstack.prefix + "/" + name,
+      Bucket: localstack.bucket,
       Body: await fsx.readFile(dest)
     }).promise();
+
+    console.log('saved releasezip');
   }
 }
 
-export class C2Exec {
-  constructor(public dataDirs: TestDataPaths){};
 
-  async listReleases() : Promise<void> {
-    await this.exec(["list-releases"]);
-  }
-
-  async start(release:string) : Promise<void> {
-    await this.exec(["start",release]);
-  }
-
-  async stop(release:string) : Promise<void> {
-    await this.exec(["stop",release]);
-  }
-
-  private c2() : string {
-    return path.join(this.dataDirs.machineOptBin, "c2");
-  }
-
-  private async exec(cmds: string[]) : Promise<void> {
-    await execShellCommand(
-      [this.c2()].concat(cmds).join(" "),
-      {
-        cwd: this.dataDirs.machineOptBin,
-      }
-    );
-  }
-}
