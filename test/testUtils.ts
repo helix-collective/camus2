@@ -123,6 +123,7 @@ export function makeTestDataParams(name: string, randomstr: string, mode: "local
 
 export async function execShellCommand(cmd: string, options: ExecOptions = {}) : Promise<void> {
   return new Promise((resolve, reject) => {
+    console.log(cmd);
     exec(cmd, options, (error, stdout, stderr) => {
       if (error) {
         reject({

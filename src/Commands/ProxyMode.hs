@@ -200,11 +200,11 @@ getSlaveIP interfaceName interfaces = do
   case interfaceByName of
     interface:_ -> ( T.pack . show . ipv4 ) interface
     _ -> (T.pack "Network Interface " <> interfaceName <> "not found" )
-    where 
-      interfaceByName = filterNetworkInterfaces interfaceName interfaces 
+    where
+      interfaceByName = filterNetworkInterfaces interfaceName interfaces
 
       filterNetworkInterfaces ::  T.Text -> [NetworkInterface] ->  [NetworkInterface]
-      filterNetworkInterfaces interfaceName interfaces = filter (\x -> name x == (T.unpack interfaceName) ) interfaces    
+      filterNetworkInterfaces interfaceName interfaces = filter (\x -> name x == (T.unpack interfaceName) ) interfaces
 
 -- Flash slave state from S3 that is more than 5 minutes old
 slaveFlush :: IOR ()
@@ -257,9 +257,7 @@ restartProxy = do
 shutdownProxy :: IOR ()
 shutdownProxy = do
   pm <- getProxyModeConfig
-  case pm_remoteStateS3 pm of
-    Nothing -> shutdownLocalProxy
-    _ -> return ()
+  shutdownLocalProxy
 
 generateSslCertificate :: IOR ()
 generateSslCertificate = do
