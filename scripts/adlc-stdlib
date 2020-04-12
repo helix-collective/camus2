@@ -1,0 +1,5 @@
+#!/bin/bash
+# Print the paths to the adl standard library (inside the container)
+
+ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null && pwd )"
+exec $ROOT/scripts/adlenv find /opt/lib/adl -name '*.adl'
