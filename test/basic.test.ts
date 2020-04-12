@@ -16,7 +16,7 @@ import {
 import { C2Exec } from "./C2Exec";
 
 /// Trivial release wit no contents except the release.json - actions just touch files
-function makeRelease(setup: TestSetup) : JSZip {
+function makeRelease(setup: TestSetup): JSZip {
   const releaseConfig = makeReleaseConfig({
     templates: [],
     prestartCommand: "touch prestarted",
@@ -37,13 +37,12 @@ function makeConfig(setup: TestSetup): ToolConfig {
   });
 }
 
-for(const remoteMode of ["local","remote"] as const) {
-  describe(`Run remote mode ${remoteMode}`, ()=>{
-
+for (const remoteMode of ["local", "remote"] as const) {
+  describe(`Run remote mode ${remoteMode}`, () => {
     const testSetup: TestSetup = {
       randomstr: uuid(),
       dataDirs: null,
-      mode: remoteMode
+      mode: remoteMode,
     };
     beforeEach(async () => {
       await setupTest(`basic-${remoteMode}`, testSetup);
@@ -56,20 +55,28 @@ for(const remoteMode of ["local","remote"] as const) {
       const dataDirs = testSetup.dataDirs!;
       await writeReleaseZip(testSetup, makeRelease(testSetup));
 
-      await writeToolConfig(testSetup, makeConfig(testSetup), 'single');
+      await writeToolConfig(testSetup, makeConfig(testSetup), "single");
 
-      const c2 = new C2Exec(dataDirs,'single');
+      const c2 = new C2Exec(dataDirs, "single");
 
       await c2.start("release.zip");
-      expect(await fsx.pathExists(path.join(dataDirs.machineOptDeploys,"release","prestarted")));
-      expect(await fsx.pathExists(path.join(dataDirs.machineOptDeploys,"release","started")));
+      expect(
+        await fsx.pathExists(
+          path.join(dataDirs.machineOptDeploys, "release", "prestarted")
+        )
+      );
+      expect(
+        await fsx.pathExists(
+          path.join(dataDirs.machineOptDeploys, "release", "started")
+        )
+      );
 
       await c2.stop("release.zip");
-      expect(await fsx.pathExists(path.join(dataDirs.machineOptDeploys,"release","stopped")));
+      expect(
+        await fsx.pathExists(
+          path.join(dataDirs.machineOptDeploys, "release", "stopped")
+        )
+      );
     });
   });
 }
-
-
-
-
