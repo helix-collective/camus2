@@ -5,7 +5,7 @@ import {exec, ExecOptions, ChildProcess, spawn} from 'child_process'
 import { createJsonBinding } from './adl-gen/runtime/json';
 import { RESOLVER } from './adl-gen/resolver';
 import JSZip from 'jszip';
-import { ReleaseConfig, texprReleaseConfig } from './adl-gen/release';
+import { ReleaseConfig, texprReleaseConfig, makeReleaseConfig } from './adl-gen/release';
 import AWS, { Endpoint } from 'aws-sdk';
 import retry from 'promise-retry'
 
@@ -139,6 +139,7 @@ export async function execShellCommand(cmd: string, options: ExecOptions = {}) :
   });
 }
 
+/** Save c2 tool config to machine and/or controller */
 export async function writeToolConfig(setup: TestSetup, toolConfig: ToolConfig, mode:"single"|"controller"|"target") : Promise<void> {
   const jsonBinding = createJsonBinding(RESOLVER, texprToolConfig());
 
@@ -150,45 +151,51 @@ export async function writeToolConfig(setup: TestSetup, toolConfig: ToolConfig, 
   }
 }
 
-
-
-export async function sleep(delay: number) {
-  await new Promise(resolve =>{
-    setTimeout(()=>{resolve();}, delay);
-  });
-}
-
+/** Configure jest to start localstack for S3 use in tests */
 export function useLocalStack() {
+  // localstack is too slow to start and stop - moved setup of localstack outside of jest
+  const useInlineLocalstack=false;
+
   beforeAll(async ()=>{
-    console.log('starting localstack');
-    localstack.dockerCompose = spawn('docker-compose', ['up'], {detached:true, cwd: path.join(__dirname, 'localstack')});
+    if(useInlineLocalstack) {
+      console.log('starting localstack');
+      localstack.dockerCompose = spawn('docker-compose', ['up'], {detached:true, cwd: path.join(__dirname, 'localstack')});
+    } else {
+      console.log("using external localstack")
+    }
 
     localstack.s3 = new AWS.S3({endpoint: `http://${localstack.host}:${localstack.port}`});
     await retry(async function (retry, number) {
       try {
-        await localstack.s3!.createBucket({
-          Bucket: localstack.bucket
-        }).promise();
+        // create bucket if not already present
+        const listBucketsResp = await localstack.s3!.listBuckets().promise();
+        const bucketNames : string[] = listBucketsResp.Buckets!.map(b=>b.Name!);
+
+        if (bucketNames.filter(bn=>bn===localstack.bucket).length === 0) {
+          await localstack.s3!.createBucket({
+            Bucket: localstack.bucket
+          }).promise();
+        }
       }
       catch (error) {
         return retry(error);
       }
     });
-
-    console.log('started localstack');
   });
   afterAll(async ()=>{
-    // kill and wait for exit
-    await Promise.all([
-      new Promise(resolve=>{
-        localstack.dockerCompose?.on('exit',()=>{resolve();});
-      }),
-      localstack.dockerCompose?.kill()
-    ])
-    console.log('uselocalstack after all done')
+    if(useInlineLocalstack) {
+      // kill and wait for exit
+      await Promise.all([
+        new Promise(resolve=>{
+          localstack.dockerCompose?.on('exit',()=>{resolve();});
+        }),
+        localstack.dockerCompose?.kill()
+      ])
+    }
   });
 }
 
+/** Wrapper beforeAll helper */
 export async function setupTest(
   name: string,
   testSetup: TestSetup
@@ -207,14 +214,15 @@ export async function tearDownTest(
       await fsx.remove(testSetup.dataDirs.workdir);
     }
   }
-  console.log('tearDownTest done');
 }
 
+/** Helper for inserting the release.json in a JSZip archive */
 export function zipAddReleaseJson(zip: JSZip, releaseConfig: ReleaseConfig) {
   const jsonBinding = createJsonBinding(RESOLVER, texprReleaseConfig());
   zip.file("release.json", JSON.stringify(jsonBinding.toJson(releaseConfig)));
 }
 
+/** Helper for saving release zip to directories / localstack S3 for the tests */
 export async function writeReleaseZip(setup: TestSetup, zip: JSZip, name="release.zip") : Promise<void> {
   console.log('start save releasezip', name);
   let dest = path.join(setup.dataDirs!.config.releases.value, name);
@@ -231,16 +239,43 @@ export async function writeReleaseZip(setup: TestSetup, zip: JSZip, name="releas
   );
 
   if(setup.mode === 'remote') {
-
-
     await localstack.s3!.putObject({
       Key: localstack.prefix + "/" + name,
       Bucket: localstack.bucket,
       Body: await fsx.readFile(dest)
     }).promise();
-
-    console.log('saved releasezip');
   }
 }
 
+/// Release zip of a simple http server
+export function makeReleaseHttpd(setup: TestSetup,
+  exposedPort: string,
+  testfilePath: string,
+  testfileContents: string,
+) : JSZip {
+  const releaseConfig = makeReleaseConfig({
+    templates: [
+      "docker-compose.yml.tpl"
+    ],
+    prestartCommand: "",
+    startCommand: "touch start && docker-compose up -d && touch started",
+    stopCommand: "docker-compose kill && docker-compose rm -f",
+  });
 
+  const zip = new JSZip();
+  zipAddReleaseJson(zip, releaseConfig);
+  zip.file("docker-compose.yml.tpl", `
+version: '2.1'
+services:
+  webserver:
+    image: httpd:2.4-alpine
+    ports:
+      - ${exposedPort}:80
+    volumes:
+      - ./:/usr/local/apache2/htdocs/:ro
+  `);
+
+  // A file which will be availble on the http server for testing
+  zip.file(testfilePath, testfileContents);
+  return zip;
+}

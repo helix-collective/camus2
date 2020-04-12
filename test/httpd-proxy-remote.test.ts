@@ -13,8 +13,8 @@ import {
   tearDownTest,
   zipAddReleaseJson,
   writeReleaseZip,
-  sleep,
   localstack,
+  makeReleaseHttpd,
 } from "./testUtils";
 import { C2Exec } from "./C2Exec";
 import promiseRetry from "promise-retry";
@@ -26,28 +26,7 @@ const testfilePath = 'testfile.txt';
 
 /// Release zip of a simple http server
 export function makeReleaseHttpdProxyMode(setup: TestSetup, testfileContents:string) : JSZip {
-  const releaseConfig = makeReleaseConfig({
-    templates: [
-      "docker-compose.yml.tpl"
-    ],
-    prestartCommand: "",
-    startCommand: "touch start && docker-compose up -d && touch started",
-    stopCommand: "docker-compose kill && docker-compose rm -f",
-  });
-
-  const zip = new JSZip();
-  zipAddReleaseJson(zip, releaseConfig);
-  zip.file("docker-compose.yml.tpl", `version: '2.1'
-services:
-  webserver:
-    image: httpd:2.4-alpine
-    ports:
-      - {{ports.http}}:80
-    volumes:
-      - ./:/usr/local/apache2/htdocs/:ro
-  `);
-  zip.file(testfilePath, testfileContents);
-  return zip;
+  return makeReleaseHttpd(setup, '{{ports.http}}', testfilePath, testfileContents);
 }
 
 /// Tool config with proxy mode

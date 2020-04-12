@@ -8,7 +8,7 @@ module.exports = {
     '<rootDir>/setup.ts'
   ],
 
-  // act as node - otherwise assumes browser which means HTTP requests have to obey CORS etc
+  // act as node - otherwise assumes a browser-like environment which means HTTP requests have to obey CORS etc
   testEnvironment: "node",
 
   // run in series - camus2 does things like install frontendproxy which are not runnable in parallel

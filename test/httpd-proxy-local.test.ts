@@ -13,8 +13,6 @@ import {
   tearDownTest,
   zipAddReleaseJson,
   writeReleaseZip,
-  sleep,
-  localstack,
 } from "./testUtils";
 import { C2Exec } from "./C2Exec";
 import promiseRetry from "promise-retry";

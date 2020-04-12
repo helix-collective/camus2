@@ -13,7 +13,7 @@ import {
   tearDownTest,
   zipAddReleaseJson,
   writeReleaseZip,
-  sleep,
+  makeReleaseHttpd,
 } from "./testUtils";
 import { C2Exec } from "./C2Exec";
 import promiseRetry from "promise-retry";
@@ -22,30 +22,7 @@ const localHttpPort = 8081;
 const testfilePath = 'testfile.txt';
 const testfileContents = 'testfilecontents';
 
-/// Release zip of a simple http server
-export function makeReleaseHttpd(setup: TestSetup) : JSZip {
-  const releaseConfig = makeReleaseConfig({
-    templates: [],
-    prestartCommand: "",
-    startCommand: "touch start && docker-compose up -d && touch started",
-    stopCommand: "docker-compose kill && docker-compose rm -f",
-  });
 
-  const zip = new JSZip();
-  zipAddReleaseJson(zip, releaseConfig);
-  zip.file("docker-compose.yml", `
-version: '2.1'
-services:
-  webserver:
-    image: httpd:2.4-alpine
-    ports:
-      - ${localHttpPort}:80
-    volumes:
-      - ./:/usr/local/apache2/htdocs/:ro
-  `);
-  zip.file(testfilePath, testfileContents);
-  return zip;
-}
 
 /// Trivial tool config with no special options
 function makeConfig(setup: TestSetup): ToolConfig {
@@ -71,7 +48,12 @@ for(const remoteMode of ["remote","local"] as const) {
     });
     test("Config and deployment of a httpd server", async () => {
       const dataDirs = testSetup.dataDirs!;
-      await writeReleaseZip(testSetup, makeReleaseHttpd(testSetup), testSetup.randomstr);
+      await writeReleaseZip(testSetup,
+        makeReleaseHttpd(testSetup,
+          `${localHttpPort}`,
+          testfilePath,
+          testfileContents),
+        testSetup.randomstr);
 
       await writeToolConfig(testSetup, makeConfig(testSetup),'single');
 

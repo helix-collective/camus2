@@ -1,11 +1,12 @@
 import path from 'path';
 import { TestDataPaths, localstack, execShellCommand } from './testUtils';
-export class C2Exec {
 
-  cwd: string;
+/// Typescript wrapper around shell execution of c2
+export class C2Exec {
+  workingDir: string;
 
   constructor(public dataDirs: TestDataPaths, public mode:'single'|'controller'|'target') {
-    this.cwd = mode==='controller' ? this.dataDirs.controllerOptBin : this.dataDirs.machineOptBin;
+    this.workingDir = mode==='controller' ? this.dataDirs.controllerOptBin : this.dataDirs.machineOptBin;
   }
   ;
   async listReleases(): Promise<void> {
@@ -30,7 +31,7 @@ export class C2Exec {
     await this.exec(['shutdown-frontend-proxy']);
   }
   private c2(): string {
-    return path.join(this.cwd, "c2");
+    return path.join(this.workingDir, "c2");
   }
   private async exec(cmds: string[]): Promise<void> {
     const env = {
@@ -39,7 +40,7 @@ export class C2Exec {
     };
     await execShellCommand([this.c2()].concat(cmds).join(" "), {
       env,
-      cwd: this.cwd,
+      cwd: this.workingDir,
     });
   }
 }
