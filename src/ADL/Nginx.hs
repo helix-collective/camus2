@@ -5,6 +5,10 @@ module ADL.Nginx(
     NginxHealthCheck(..),
     NginxHttpEndPoint(..),
     NginxHttpsEndPoint(..),
+    mkNginxConfContext,
+    mkNginxHealthCheck,
+    mkNginxHttpEndPoint,
+    mkNginxHttpsEndPoint,
 ) where
 
 import ADL.Core

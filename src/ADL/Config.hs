@@ -15,6 +15,13 @@ module ADL.Config(
     SslCertPaths(..),
     ToolConfig(..),
     Verbosity(..),
+    mkDynamicJsonSource,
+    mkEndPoint,
+    mkHealthCheckConfig,
+    mkLetsEncryptConfig,
+    mkProxyModeConfig,
+    mkSslCertPaths,
+    mkToolConfig,
 ) where
 
 import ADL.Core
