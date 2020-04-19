@@ -4,6 +4,9 @@ module ADL.State(
     SlaveState(..),
     SlaveStatus(..),
     State(..),
+    mkDeploy,
+    mkSlaveState,
+    mkState,
 ) where
 
 import ADL.Core

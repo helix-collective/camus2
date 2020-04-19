@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module ADL.Release(
     ReleaseConfig(..),
+    mkReleaseConfig,
 ) where
 
 import ADL.Core
