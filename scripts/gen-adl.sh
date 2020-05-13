@@ -11,6 +11,9 @@ ADLC=$SCRIPT_DIR/adlc
 APP_ADL_DIR=$ROOT/adl
 APP_ADL_FILES=`find $APP_ADL_DIR -iname '*.adl'`
 
+ADL_STDLIB_DIR=`$ADLC show --adlstdlib`
+ADL_STDLIB_SYS_FILES=`find ${ADL_STDLIB_DIR} -name '*.adl'`
+
 ${ADLC} haskell \
     -O $ROOT/src \
     --package=ADL \
@@ -19,7 +22,6 @@ ${ADLC} haskell \
     --searchdir $APP_ADL_DIR \
     --manifest=$ROOT/src/ADL/.manifest \
     ${APP_ADL_FILES}
-
 
 # Generate Typescript for unit testing code
 OUTPUT_DIR=$ROOT/test/adl-gen
@@ -30,5 +32,5 @@ $ADLC typescript \
   --include-rt \
   --include-resolver \
   --runtime-dir runtime \
-  ${ADL_STDLIB_SYS_FILES} \
-  $APP_ADL_FILES
+  ${ADL_STDLIB_DIR}/sys/types.adl \
+  ${APP_ADL_FILES}
