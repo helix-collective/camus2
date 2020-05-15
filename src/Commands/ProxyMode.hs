@@ -257,7 +257,9 @@ restartProxy = do
 shutdownProxy :: IOR ()
 shutdownProxy = do
   pm <- getProxyModeConfig
-  shutdownLocalProxy
+  case pm_remoteStateS3 pm of
+    Nothing -> shutdownLocalProxy
+    _ -> return ()
 
 generateSslCertificate :: IOR ()
 generateSslCertificate = do
