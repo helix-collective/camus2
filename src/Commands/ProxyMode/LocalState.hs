@@ -28,7 +28,7 @@ import ADL.Nginx(NginxConfContext(..), NginxHealthCheck(..), NginxEndPoint(..), 
 import ADL.State(State(..), Deploy(..))
 import ADL.Types(EndPointLabel, DeployLabel)
 import Commands.ProxyMode.Types
-import Util(unpackRelease,fetchConfigContext,removeNullKeys)
+import Util(unpackRelease,fetchConfigContext,removeNullKeys,reconfigRunningDeploy)
 import Control.Monad(when)
 import Control.Monad.Reader(ask)
 import Control.Monad.IO.Class
@@ -74,6 +74,9 @@ updateState newStateFn = do
       executeAction action
       liftIO $ adlToJsonFile stateFile (nextState action state)
 
+--deployReconfigActions :: State-> [Deploy] -> [StateAction]
+--deployReconfigActions newState deploysToReconfig =
+--  (catMaybes . map (\d -> (SM.lookup (d_label d) (s_dconfigs newState)) >>= (\m -> Just (ReConfigDeploy d m))  )) deploysToReconfig
 
 -- | Compute the difference between oldState and newState, and express this as a list
 -- of actions to update the old state
@@ -88,6 +91,9 @@ stateUpdateActions endPointMap oldState newState =
   -- update any deploys that have changed
   <> concatMap updateDeploy deploysToUpdate
 
+  -- reconfig any deploys that have changed dynamic configs
+  <> concatMap reconfigDeploy deploysToReConfig
+
   -- Setup the endpoints (ie the nginx config?) if any have changed
   <> if newEndPoints /= oldEndPoints then [SetEndPoints newEndPoints] else []
 
@@ -96,14 +102,22 @@ stateUpdateActions endPointMap oldState newState =
   where
     oldDeploys = SM.toMap (s_deploys oldState)
     newDeploys = SM.toMap (s_deploys newState)
+
+    oldDeploysExDC = M.map (\d -> d{d_dynamicConfigModes=SM.empty}) oldDeploys
+    newDeploysExDC = M.map (\d -> d{d_dynamicConfigModes=SM.empty}) newDeploys
+
     oldEndPoints = (catMaybes . map (getEndpointDeploy endPointMap newState) . SM.toList) (s_connections oldState)
     newEndPoints = (catMaybes . map (getEndpointDeploy endPointMap newState) . SM.toList) (s_connections newState)
-    deploysToCreate = M.elems (M.difference newDeploys oldDeploys)
-    deploysToUpdate = filter (\(d1,d2) -> d1 /= d2) (M.elems (M.intersectionWith (\d1 d2 -> (d1,d2)) oldDeploys newDeploys))
-    (deploysToDestroyFirst,deploysToDestroyLast) = partition usesRequiredPort (M.elems (M.difference oldDeploys newDeploys))
+    deploysToCreate = M.elems (M.difference newDeploysExDC oldDeploysExDC)
+    deploysToUpdate = filter (\(d1,d2) -> d1 /= d2) (M.elems (M.intersectionWith (\d1 d2 -> (d1,d2)) oldDeploysExDC newDeploysExDC))
+    deploysToReConfig = filter (\(d1,d2) -> d1 /= d2) (M.elems (M.intersectionWith (\d1 d2 -> (d1,d2)) oldDeploys newDeploys))
+    (deploysToDestroyFirst,deploysToDestroyLast) = partition usesRequiredPort (M.elems (M.difference oldDeploysExDC newDeploysExDC))
+
     updateDeploy (d1,d2) = [DestroyDeploy d1, CreateDeploy d2]
+    reconfigDeploy (d1,d2) = [ReConfigDeploy d2]
     usesRequiredPort d = elem (d_port d) requiredPorts
     requiredPorts =map d_port (M.elems newDeploys)
+
 
 getEndpointDeploy :: M.Map EndPointLabel EndPoint -> State -> (EndPointLabel,DeployLabel) -> Maybe (LabelledEndpoint,Deploy)
 getEndpointDeploy endPointMap state (eplabel, dlabel) = do
@@ -121,7 +135,7 @@ executeAction (CreateDeploy d) = do
     fetchConfigContext Nothing
     let deployDir = T.unpack (tc_deploysDir tcfg) </> (takeBaseName (T.unpack (d_label d)))
     liftIO $ createDirectoryIfMissing True deployDir
-    unpackRelease (contextWithLocalPorts pm (d_port d)) (d_release d) deployDir
+    unpackRelease (contextWithLocalPorts pm (d_port d)) (d_release d) deployDir d
 
     -- Start it up
     rcfg <- getReleaseConfig deployDir
@@ -152,6 +166,16 @@ executeAction (SetEndPoints liveEndPoints) = do
       maybeEndpoints eps liveEndPoints = [ (ep,findDeploy label) | (label,ep) <- SM.toList eps]
         where
           findDeploy label = fmap snd (find ((==label). fst . fst) liveEndPoints)
+
+executeAction (ReConfigDeploy d) = do
+  -- todo: refactor back with CreateDeploy (basically same but no execution of start)
+  scopeInfo "execute ReConfigDeploy" $ do
+    tcfg <- getToolConfig
+    pm <- getProxyModeConfig
+    fetchConfigContext Nothing
+    let deployDir = T.unpack (tc_deploysDir tcfg) </> (takeBaseName (T.unpack (d_label d)))
+    liftIO $ createDirectoryIfMissing True deployDir
+    reconfigRunningDeploy (contextWithLocalPorts pm (d_port d)) (d_release d) deployDir d
 
 getState :: IOR State
 getState = do

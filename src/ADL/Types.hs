@@ -2,10 +2,9 @@
 module ADL.Types(
     ConfigName,
     DeployLabel,
-    DynamicConfigMode,
-    DynamicConfigName,
     EndPointLabel,
     FilePath,
+    ReleaseLabel,
     S3Path,
     StaticConfigName,
     StringKeyMap,
@@ -25,13 +24,11 @@ type ConfigName = T.Text
 
 type DeployLabel = T.Text
 
-type DynamicConfigMode = T.Text
-
-type DynamicConfigName = ConfigName
-
 type EndPointLabel = T.Text
 
 type FilePath = T.Text
+
+type ReleaseLabel = T.Text
 
 type S3Path = T.Text
 

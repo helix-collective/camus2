@@ -12,6 +12,7 @@ module ADL.State(
 import ADL.Core
 import Control.Applicative( (<$>), (<*>), (<|>) )
 import Prelude( ($) )
+import qualified ADL.Dconfig
 import qualified ADL.Types
 import qualified Data.Aeson as JS
 import qualified Data.HashMap.Strict as HM
@@ -24,12 +25,12 @@ data Deploy = Deploy
     { d_label :: ADL.Types.DeployLabel
     , d_release :: T.Text
     , d_port :: Data.Word.Word32
-    , d_dynamicConfigModes :: (ADL.Types.StringKeyMap ADL.Types.DynamicConfigName ADL.Types.DynamicConfigMode)
+    , d_dynamicConfigModes :: ADL.Dconfig.DynamicConfigNameModeMap
     }
     deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
 
-mkDeploy :: ADL.Types.DeployLabel -> T.Text -> Data.Word.Word32 -> (ADL.Types.StringKeyMap ADL.Types.DynamicConfigName ADL.Types.DynamicConfigMode) -> Deploy
-mkDeploy label release port dynamicConfigModes = Deploy label release port dynamicConfigModes
+mkDeploy :: ADL.Types.DeployLabel -> T.Text -> Data.Word.Word32 -> Deploy
+mkDeploy label release port = Deploy label release port (stringMapFromList [])
 
 instance AdlValue Deploy where
     atype _ = "state.Deploy"
@@ -45,7 +46,7 @@ instance AdlValue Deploy where
         <$> parseField "label"
         <*> parseField "release"
         <*> parseField "port"
-        <*> parseField "dynamicConfigModes"
+        <*> parseFieldDef "dynamicConfigModes" (stringMapFromList [])
 
 data SlaveState = SlaveState
     { slaveState_status :: SlaveStatus

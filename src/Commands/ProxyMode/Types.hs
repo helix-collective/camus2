@@ -5,6 +5,7 @@ import qualified Data.Text as T
 
 import ADL.Config(EndPoint(..), ToolConfig(..), DeployMode(..), ProxyModeConfig(..))
 import ADL.Types(EndPointLabel)
+import ADL.Dconfig(DynamicConfigName, DynamicConfigMode)
 import ADL.State(State(..), Deploy(..), SlaveState(..))
 import Types(IOR, REnv(..), getToolConfig, scopeInfo)
 import Data.Time(UTCTime)
@@ -27,6 +28,7 @@ data StateAction
   = CreateDeploy Deploy
   | DestroyDeploy Deploy
   | SetEndPoints [(LabelledEndpoint,Deploy)]
+  | ReConfigDeploy Deploy
 
 -- | Extract the proxy mode configuration from the environment
 getProxyModeConfig :: IOR ProxyModeConfig
@@ -44,6 +46,7 @@ nextState :: StateAction -> State -> State
 nextState (CreateDeploy d) s = s{s_deploys=SM.insert (d_label d) d (s_deploys s)}
 nextState (DestroyDeploy d) s = s{s_deploys= SM.delete (d_label d) (s_deploys s)}
 nextState (SetEndPoints eps) s = s{s_connections=SM.fromList [ (epl, d_label d) | ((epl,ep),d) <- eps ]}
+nextState (ReConfigDeploy d) s = s{s_deploys=SM.insert (d_label d) d (s_deploys s)}
 
 showText :: Show a => a -> T.Text
 showText = T.pack . show

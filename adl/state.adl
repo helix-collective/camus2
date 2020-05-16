@@ -4,8 +4,7 @@ import sys.types.Map;
 import types.EndPointLabel;
 import types.DeployLabel;
 import types.StringKeyMap;
-import types.DynamicConfigMode;
-import types.DynamicConfigName;
+import dconfig.DynamicConfigNameModeMap;
 
 // The system state stored to manage multiple deploys with
 // a proxy for live switching between them and, where specified, SSL
@@ -17,6 +16,8 @@ struct State {
 
   // Connections between the configured endpoints and deployments
   StringKeyMap<EndPointLabel, DeployLabel> connections;
+
+  // Note: Default (empty) state is separately specified in Commands/ProxyMode/Types.hs emptyState
 };
 
 
@@ -24,7 +25,7 @@ struct State {
 struct SlaveState {
   // The result of the last state change
   SlaveStatus status;
-  
+
   // The IP of the slave on which camus2 is running
   String ipAddress;
 
@@ -45,7 +46,7 @@ struct Deploy {
   DeployLabel label;
   String release;
   Word32 port;
-  StringKeyMap<DynamicConfigName, DynamicConfigMode> dynamicConfigModes;
+  DynamicConfigNameModeMap dynamicConfigModes = {};
 };
 
 };

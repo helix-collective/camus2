@@ -11,7 +11,7 @@ export class C2Exec {
   ) {
     this.workingDir =
       mode === "controller"
-        ? this.dataDirs.controllerOptBin
+        ? this.dataDirs.controllerOptBin!
         : this.dataDirs.machineOptBin;
   }
   async listReleases(): Promise<void> {
@@ -31,6 +31,9 @@ export class C2Exec {
   }
   async stop(release: string): Promise<void> {
     await this.exec(["stop", release]);
+  }
+  async reconfig(deploy: string, dcnamemode:string): Promise<void> {
+    await this.exec(["reconfig", deploy, dcnamemode]);
   }
   async terminate(): Promise<void> {
     await this.exec(["shutdown-frontend-proxy"]);

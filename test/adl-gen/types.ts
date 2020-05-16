@@ -60,6 +60,17 @@ export function texprDeployLabel(): ADL.ATypeExpr<DeployLabel> {
   return {value : {typeRef : {kind: "reference", value : snDeployLabel}, parameters : []}};
 }
 
+export type ReleaseLabel = string;
+
+const ReleaseLabel_AST : ADL.ScopedDecl =
+  {"moduleName":"types","decl":{"annotations":[],"type_":{"kind":"type_","value":{"typeParams":[],"typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}}},"name":"ReleaseLabel","version":{"kind":"nothing"}}};
+
+export const snReleaseLabel: ADL.ScopedName = {moduleName:"types", name:"ReleaseLabel"};
+
+export function texprReleaseLabel(): ADL.ATypeExpr<ReleaseLabel> {
+  return {value : {typeRef : {kind: "reference", value : snReleaseLabel}, parameters : []}};
+}
+
 /**
  * ConfigName is a name of one of the keys of the top level object used for template interpolation
  */
@@ -88,42 +99,13 @@ export function texprStaticConfigName(): ADL.ATypeExpr<StaticConfigName> {
   return {value : {typeRef : {kind: "reference", value : snStaticConfigName}, parameters : []}};
 }
 
-/**
- * ConfigName for switchable dynamic configs - eg 'queue' 'processing'
- */
-export type DynamicConfigName = ConfigName;
-
-const DynamicConfigName_AST : ADL.ScopedDecl =
-  {"moduleName":"types","decl":{"annotations":[],"type_":{"kind":"type_","value":{"typeParams":[],"typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"ConfigName"}},"parameters":[]}}},"name":"DynamicConfigName","version":{"kind":"nothing"}}};
-
-export const snDynamicConfigName: ADL.ScopedName = {moduleName:"types", name:"DynamicConfigName"};
-
-export function texprDynamicConfigName(): ADL.ATypeExpr<DynamicConfigName> {
-  return {value : {typeRef : {kind: "reference", value : snDynamicConfigName}, parameters : []}};
-}
-
-/**
- * Name of a mode of a dynamic config - eg 'active' 'inactive'
- */
-export type DynamicConfigMode = string;
-
-const DynamicConfigMode_AST : ADL.ScopedDecl =
-  {"moduleName":"types","decl":{"annotations":[],"type_":{"kind":"type_","value":{"typeParams":[],"typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}}},"name":"DynamicConfigMode","version":{"kind":"nothing"}}};
-
-export const snDynamicConfigMode: ADL.ScopedName = {moduleName:"types", name:"DynamicConfigMode"};
-
-export function texprDynamicConfigMode(): ADL.ATypeExpr<DynamicConfigMode> {
-  return {value : {typeRef : {kind: "reference", value : snDynamicConfigMode}, parameters : []}};
-}
-
 export const _AST_MAP: { [key: string]: ADL.ScopedDecl } = {
   "types.StringKeyMap" : StringKeyMap_AST,
   "types.FilePath" : FilePath_AST,
   "types.S3Path" : S3Path_AST,
   "types.EndPointLabel" : EndPointLabel_AST,
   "types.DeployLabel" : DeployLabel_AST,
+  "types.ReleaseLabel" : ReleaseLabel_AST,
   "types.ConfigName" : ConfigName_AST,
-  "types.StaticConfigName" : StaticConfigName_AST,
-  "types.DynamicConfigName" : DynamicConfigName_AST,
-  "types.DynamicConfigMode" : DynamicConfigMode_AST
+  "types.StaticConfigName" : StaticConfigName_AST
 };

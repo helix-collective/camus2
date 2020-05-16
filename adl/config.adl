@@ -1,12 +1,15 @@
 module config
 {
-import types.FilePath;
-import types.S3Path;
+
 import types.EndPointLabel;
 import types.StaticConfigName;
-import types.DynamicConfigName;
-import types.DynamicConfigMode;
+import dconfig.DynamicConfigName;
+import dconfig.DynamicConfigMode;
+import dconfig.JsonSource;
+import dconfig.DynamicConfigNameJSrcMap;
 import types.StringKeyMap;
+import types.FilePath;
+import types.S3Path;
 import sys.types.Map;
 import sys.types.Set;
 import sys.types.Pair;
@@ -32,7 +35,7 @@ struct ToolConfig {
     StringKeyMap<StaticConfigName, JsonSource> configSources = {};
 
     /// Dynamic config sources
-    StringKeyMap<DynamicConfigName, DynamicJsonSource> dynamicConfigSources = {};
+    DynamicConfigNameJSrcMap dynamicConfigSources = {};
 
     DeployMode deployMode = "noproxy";
 
@@ -119,28 +122,6 @@ struct SslCertPaths {
   FilePath sslCertificateKey;
 };
 
-/// Methods of providing text for a config context
-union JsonSource
-{
-    // Context from a local file
-    FilePath file;
-
-    /// Context from an S3 object
-    S3Path s3;
-
-    /// Context from AWS secrets manager secret
-    String awsSecretArn;
-};
-
-/// A config source that can be changed to different named Modes at runtime.
-struct DynamicJsonSource {
-  DynamicConfigMode defaultMode;
-
-  StringKeyMap<DynamicConfigMode, JsonSource> modes;
-};
-
-/// Listing of available modes per configName
-type DynamicConfigOptions = StringKeyMap<DynamicConfigName, Set<DynamicConfigMode>>;
 
 union Verbosity
 {

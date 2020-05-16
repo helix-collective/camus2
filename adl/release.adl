@@ -2,6 +2,7 @@ module release
 {
 
 import types.FilePath;
+import sys.types.Maybe;
 
 /// Configuration for a package to be customized
 /// when unpacked
@@ -11,6 +12,9 @@ struct ReleaseConfig
     String prestartCommand;
     String startCommand;
     String stopCommand;
+
+    /// Save json context used for cfg templating to file
+    Maybe<String> ctxJson = "nothing";
 };
 
 };

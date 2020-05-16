@@ -2,12 +2,9 @@
 module ADL.Config(
     BlobStoreConfig(..),
     DeployMode(..),
-    DynamicConfigOptions,
-    DynamicJsonSource(..),
     EndPoint(..),
     EndPointType(..),
     HealthCheckConfig(..),
-    JsonSource(..),
     LetsEncryptConfig(..),
     MachineLabel(..),
     ProxyModeConfig(..),
@@ -15,7 +12,6 @@ module ADL.Config(
     SslCertPaths(..),
     ToolConfig(..),
     Verbosity(..),
-    mkDynamicJsonSource,
     mkEndPoint,
     mkHealthCheckConfig,
     mkLetsEncryptConfig,
@@ -27,6 +23,7 @@ module ADL.Config(
 import ADL.Core
 import Control.Applicative( (<$>), (<*>), (<|>) )
 import Prelude( ($) )
+import qualified ADL.Dconfig
 import qualified ADL.Sys.Types
 import qualified ADL.Types
 import qualified Data.Aeson as JS
@@ -71,29 +68,6 @@ instance AdlValue DeployMode where
         "noproxy" -> parseUnionVoid DeployMode_noproxy
         "proxy" ->  parseUnionValue DeployMode_proxy
         _ -> parseFail "expected a discriminator for DeployMode (noproxy,proxy)" 
-
-type DynamicConfigOptions = (ADL.Types.StringKeyMap ADL.Types.DynamicConfigName (ADL.Sys.Types.Set ADL.Types.DynamicConfigMode))
-
-data DynamicJsonSource = DynamicJsonSource
-    { djsrc_defaultMode :: ADL.Types.DynamicConfigMode
-    , djsrc_modes :: (ADL.Types.StringKeyMap ADL.Types.DynamicConfigMode JsonSource)
-    }
-    deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
-
-mkDynamicJsonSource :: ADL.Types.DynamicConfigMode -> (ADL.Types.StringKeyMap ADL.Types.DynamicConfigMode JsonSource) -> DynamicJsonSource
-mkDynamicJsonSource defaultMode modes = DynamicJsonSource defaultMode modes
-
-instance AdlValue DynamicJsonSource where
-    atype _ = "config.DynamicJsonSource"
-    
-    jsonGen = genObject
-        [ genField "defaultMode" djsrc_defaultMode
-        , genField "modes" djsrc_modes
-        ]
-    
-    jsonParser = DynamicJsonSource
-        <$> parseField "defaultMode"
-        <*> parseField "modes"
 
 data EndPoint = EndPoint
     { ep_serverNames :: [T.Text]
@@ -154,27 +128,6 @@ instance AdlValue HealthCheckConfig where
     jsonParser = HealthCheckConfig
         <$> parseField "incomingPath"
         <*> parseField "outgoingPath"
-
-data JsonSource
-    = Jsrc_file ADL.Types.FilePath
-    | Jsrc_s3 ADL.Types.S3Path
-    | Jsrc_awsSecretArn T.Text
-    deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
-
-instance AdlValue JsonSource where
-    atype _ = "config.JsonSource"
-    
-    jsonGen = genUnion (\jv -> case jv of
-        Jsrc_file v -> genUnionValue "file" v
-        Jsrc_s3 v -> genUnionValue "s3" v
-        Jsrc_awsSecretArn v -> genUnionValue "awsSecretArn" v
-        )
-    
-    jsonParser = parseUnion $ \disc -> case disc of
-        "file" ->  parseUnionValue Jsrc_file
-        "s3" ->  parseUnionValue Jsrc_s3
-        "awsSecretArn" ->  parseUnionValue Jsrc_awsSecretArn
-        _ -> parseFail "expected a discriminator for JsonSource (file,s3,awsSecretArn)" 
 
 data LetsEncryptConfig = LetsEncryptConfig
     { lec_certbotPath :: T.Text
@@ -308,8 +261,8 @@ data ToolConfig = ToolConfig
     , tc_autoCertName :: T.Text
     , tc_autoCertContactEmail :: T.Text
     , tc_releases :: BlobStoreConfig
-    , tc_configSources :: (ADL.Types.StringKeyMap ADL.Types.StaticConfigName JsonSource)
-    , tc_dynamicConfigSources :: (ADL.Types.StringKeyMap ADL.Types.DynamicConfigName DynamicJsonSource)
+    , tc_configSources :: (ADL.Types.StringKeyMap ADL.Types.StaticConfigName ADL.Dconfig.JsonSource)
+    , tc_dynamicConfigSources :: ADL.Dconfig.DynamicConfigNameJSrcMap
     , tc_deployMode :: DeployMode
     , tc_healthCheck :: (ADL.Sys.Types.Maybe HealthCheckConfig)
     , tc_nginxDockerVersion :: T.Text

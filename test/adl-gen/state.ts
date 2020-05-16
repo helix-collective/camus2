@@ -1,6 +1,7 @@
 /* @generated from adl module state */
 
 import * as ADL from './runtime/adl';
+import * as dconfig from './dconfig';
 import * as types from './types';
 
 export interface State {
@@ -91,7 +92,7 @@ export interface Deploy {
   label: types.DeployLabel;
   release: string;
   port: number;
-  dynamicConfigModes: types.StringKeyMap<types.DynamicConfigName, types.DynamicConfigMode>;
+  dynamicConfigModes: dconfig.DynamicConfigNameModeMap;
 }
 
 export function makeDeploy(
@@ -99,19 +100,19 @@ export function makeDeploy(
     label: types.DeployLabel,
     release: string,
     port: number,
-    dynamicConfigModes: types.StringKeyMap<types.DynamicConfigName, types.DynamicConfigMode>,
+    dynamicConfigModes?: dconfig.DynamicConfigNameModeMap,
   }
 ): Deploy {
   return {
     label: input.label,
     release: input.release,
     port: input.port,
-    dynamicConfigModes: input.dynamicConfigModes,
+    dynamicConfigModes: input.dynamicConfigModes === undefined ? {} : input.dynamicConfigModes,
   };
 }
 
 const Deploy_AST : ADL.ScopedDecl =
-  {"moduleName":"state","decl":{"annotations":[],"type_":{"kind":"struct_","value":{"typeParams":[],"fields":[{"annotations":[],"serializedName":"label","default":{"kind":"nothing"},"name":"label","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"DeployLabel"}},"parameters":[]}},{"annotations":[],"serializedName":"release","default":{"kind":"nothing"},"name":"release","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}},{"annotations":[],"serializedName":"port","default":{"kind":"nothing"},"name":"port","typeExpr":{"typeRef":{"kind":"primitive","value":"Word32"},"parameters":[]}},{"annotations":[],"serializedName":"dynamicConfigModes","default":{"kind":"nothing"},"name":"dynamicConfigModes","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"StringKeyMap"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"DynamicConfigName"}},"parameters":[]},{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"DynamicConfigMode"}},"parameters":[]}]}}]}},"name":"Deploy","version":{"kind":"nothing"}}};
+  {"moduleName":"state","decl":{"annotations":[],"type_":{"kind":"struct_","value":{"typeParams":[],"fields":[{"annotations":[],"serializedName":"label","default":{"kind":"nothing"},"name":"label","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"DeployLabel"}},"parameters":[]}},{"annotations":[],"serializedName":"release","default":{"kind":"nothing"},"name":"release","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}},{"annotations":[],"serializedName":"port","default":{"kind":"nothing"},"name":"port","typeExpr":{"typeRef":{"kind":"primitive","value":"Word32"},"parameters":[]}},{"annotations":[],"serializedName":"dynamicConfigModes","default":{"kind":"just","value":{}},"name":"dynamicConfigModes","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"dconfig","name":"DynamicConfigNameModeMap"}},"parameters":[]}}]}},"name":"Deploy","version":{"kind":"nothing"}}};
 
 export const snDeploy: ADL.ScopedName = {moduleName:"state", name:"Deploy"};
 

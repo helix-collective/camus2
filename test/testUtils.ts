@@ -17,6 +17,7 @@ import {
 } from "./adl-gen/release";
 import AWS, { Endpoint } from "aws-sdk";
 import retry from "promise-retry";
+import { State, texprState } from "./adl-gen/state";
 
 export type DirPath = string;
 export type FilePath = string;
@@ -31,9 +32,9 @@ export type TestDataPaths = {
   machineOptDeploysCurrent: DirPath;
   mockS3: DirPath;
   mockS3Configs: DirPath;
-  controllerOpt: DirPath;
-  controllerOptBin: DirPath;
-  controllerOptEtc: DirPath;
+  controllerOpt?: DirPath;
+  controllerOptBin?: DirPath;
+  controllerOptEtc?: DirPath;
   config: {
     deploysDir: DirPath;
     contextCache: DirPath;
@@ -53,10 +54,12 @@ export async function installC2Binary(dataDirs: TestDataPaths) {
     path.join(__dirname, "c2"),
     path.join(dataDirs.machineOptBin, "c2")
   );
-  await fsx.copyFile(
-    path.join(__dirname, "c2"),
-    path.join(dataDirs.controllerOptBin, "c2")
-  );
+  if(dataDirs.controllerOptBin) {
+    await fsx.copyFile(
+      path.join(__dirname, "c2"),
+      path.join(dataDirs.controllerOptBin, "c2")
+    );
+  }
 }
 
 /// Create filesystem directories in dataDirs.dirs
@@ -84,7 +87,7 @@ export const localstack: {
 export function makeTestDataParams(
   name: string,
   randomstr: string,
-  mode: "local" | "remote"
+  mode: "local" | "remote" | "single"
 ): TestDataPaths {
   const workdir = path.join(__dirname, "tests", name, randomstr);
   const machineOpt = path.join(workdir, "machine", "opt");
@@ -176,13 +179,19 @@ export async function writeToolConfig(
   if (mode === "single" || mode === "target") {
     await fsx.writeJSON(
       path.join(setup.dataDirs!.machineOptEtc, "camus2.json"),
-      jsonBinding.toJson(toolConfig)
+      jsonBinding.toJson(toolConfig),
+      {
+        spaces:2
+      }
     );
   }
   if (mode === "controller") {
     await fsx.writeJSON(
-      path.join(setup.dataDirs!.controllerOptEtc, "camus2.json"),
-      jsonBinding.toJson(toolConfig)
+      path.join(setup.dataDirs!.controllerOptEtc!, "camus2.json"),
+      jsonBinding.toJson(toolConfig),
+      {
+        spaces:2
+      }
     );
   }
 }
@@ -257,7 +266,7 @@ export async function setupTest(
 
 export async function tearDownTest(testSetup: TestSetup): Promise<void> {
   if (testSetup.dataDirs) {
-    if (!process.env["KEEPTESTDIRS"]) {
+    if (process.env["KEEPTESTDIRS"]!=="1") {
       await fsx.remove(testSetup.dataDirs.workdir);
     }
   }
@@ -334,3 +343,63 @@ services:
   zip.file(testfilePath, testfileContents);
   return zip;
 }
+
+/** Parse s3://bucket/prefixes/prefixes to object suitable for S3 get */
+export function parseS3URL(s3url:string) : {
+  Bucket: string;
+  Key: string;
+}|undefined {
+
+  const match = s3url.match(/(s3:\/\/)([^/]+)\/(.*)/);
+  if(match) {
+    return {
+      Bucket:match[2],
+      Key: match[3]
+    };
+  }
+  return undefined;
+}
+
+export async function getC2State(setup: TestSetup) : Promise<State> {
+  const toolConfigJsonBinding = createJsonBinding(RESOLVER, texprToolConfig());
+  const stateJsonBinding = createJsonBinding(RESOLVER, texprState());
+
+  const toolConfigJson = await fsx.readJSON(
+    path.join(setup.dataDirs!.machineOptEtc, "camus2.json"),
+  );
+
+  const toolConfig : ToolConfig = toolConfigJsonBinding.fromJson(toolConfigJson);
+
+  if(toolConfig.deployMode.kind === 'noproxy') {
+    throw new Error("Expected toolConfig.deployMode.kind === 'proxy'");
+  }
+  const proxyModeConfig = toolConfig.deployMode.value;
+  if(proxyModeConfig.remoteStateS3.kind === 'just') {
+
+    const s3path = parseS3URL(proxyModeConfig.remoteStateS3.value);
+    if(s3path===undefined) {
+      throw new Error(`Error parsing s3 URL ${proxyModeConfig.remoteStateS3.value}`);
+    }
+
+    const s3getResp = await localstack
+      .s3!.getObject(s3path)
+      .promise();
+
+    if(s3getResp.Body===undefined) {
+      throw new Error(`Error getting s3 URL ${proxyModeConfig.remoteStateS3.value}`);
+    }
+    const stateJson = s3getResp.Body.toString('utf-8');
+
+    return stateJsonBinding.fromJson(stateJson);
+
+  } else {
+    const dataFilePath = path.join(setup.dataDirs!.machineOptDeploys,'frontend-proxy','state.json');
+
+    const stateJson = await fsx.readJson(dataFilePath);
+
+    console.log('getC2State local file', stateJson);
+    return stateJsonBinding.fromJson(stateJson);
+  }
+
+}
+

@@ -10,6 +10,7 @@ module Commands.ProxyMode(
   restartProxy,
   shutdownProxy,
   generateSslCertificate,
+  reconfig,
   runningDeploys,
   ) where
 
@@ -27,10 +28,24 @@ import qualified Network.AWS.EC2.Metadata as EC2M
 import ADL.Config(EndPoint(..), EndPointType(..))
 import ADL.Core(adlFromJsonFile', adlToJsonFile)
 import ADL.Release(ReleaseConfig(..))
-import ADL.Config(ToolConfig(..), DeployMode(..), ProxyModeConfig(..), MachineLabel(..))
+import ADL.Config(
+  ToolConfig(..),
+  DeployMode(..),
+  ProxyModeConfig(..),
+  MachineLabel(..))
+import ADL.Dconfig(
+  DynamicJsonSource(..))
 import ADL.State(State(..), Deploy(..), SlaveState(..), SlaveStatus(..))
-import ADL.Types(EndPointLabel, DeployLabel)
-import Util(unpackRelease,fetchConfigContext, checkReleaseExists)
+import ADL.Types(
+  EndPointLabel,
+  DeployLabel,
+  ReleaseLabel)
+import ADL.Dconfig(
+  DynamicConfigName,
+  DynamicConfigNameModeMap(..),
+  DynamicConfigNameJSrcMap(..),
+  DynamicConfigMode)
+import Util(checkReleaseExists)
 import Commands.ProxyMode.Types
 import Commands.ProxyMode.LocalState(localState, restartLocalProxy, shutdownLocalProxy, generateLocalSslCertificate)
 import Commands.ProxyMode.RemoteState(remoteState, writeSlaveState, masterS3Path, flushSlaveStates)
@@ -93,6 +108,12 @@ showStatus showSlaves = do
             else d_label d <> " (" <> d_release d <> ")"
         T.putStrLn ("  " <> labeltext <> ": (localhost:" <> showText (d_port d) <> ")")
 
+getDefaultDConfigModes :: DynamicConfigNameJSrcMap -> DynamicConfigNameModeMap
+getDefaultDConfigModes dynamicConfigSources = SM.fromList $ map (\(name,jsrc) -> (name,djsrc_defaultMode jsrc)) $ SM.toList dynamicConfigSources
+
+updateDConfigModes :: DynamicConfigNameModeMap -> DynamicConfigNameModeMap -> DynamicConfigNameModeMap
+updateDConfigModes dcdefault dcupdate = SM.fromList $ M.toList $ M.union (SM.toMap dcupdate) (SM.toMap dcdefault)
+
 -- | Create and start a deployment (if it's not already running)
 createAndStart :: T.Text -> T.Text -> IOR ()
 createAndStart release asDeploy = do
@@ -102,7 +123,7 @@ createAndStart release asDeploy = do
     tcfg <- getToolConfig
     state <- getState
     port <- liftIO $ allocatePort pm state
-    dcfgmodes <- return SM.empty
+    dcfgmodes <- return $ getDefaultDConfigModes $ tc_dynamicConfigSources tcfg
     updateState (nextState (createDeploy port dcfgmodes))
   where
     createDeploy port dcfgmodes = (CreateDeploy (Deploy asDeploy release port dcfgmodes))
@@ -153,6 +174,35 @@ disconnect endPointLabel = do
       Nothing -> error (T.unpack ("no endpoint called " <> endPointLabel))
       Just endPoint -> return ()
     updateState (\s -> s{s_connections=SM.delete endPointLabel (s_connections s)})
+
+reconfig :: DeployLabel -> DynamicConfigName -> DynamicConfigMode -> IOR ()
+reconfig deployLabel dcname dcmode = do
+  scopeInfo ("Reconfiguring deployment " <> deployLabel <> " " <> dcname <> " to " <> dcmode) $ do
+    pm <- getProxyModeConfig
+    tcfg <- getToolConfig
+    state <- getState
+    -- verify deployLabel
+    deploy <- case SM.lookup deployLabel (s_deploys state) of
+      Nothing -> error (T.unpack ("no deploy called " <> deployLabel))
+      Just deploy -> return deploy
+
+    -- verify dcname
+    djsource <- case SM.lookup dcname (tc_dynamicConfigSources tcfg) of
+      Nothing -> error (T.unpack ("no dynamic configName called " <> dcname))
+      Just djsource -> return djsource
+
+    -- verify (dcname,dcmode)
+    case SM.lookup dcmode (djsrc_modes djsource) of
+      Nothing -> error (T.unpack ("no dynamic configName " <> dcname <> " mode called " <> dcmode))
+      Just endPoint -> return ()
+
+    updateState $ nextState $ ReConfigDeploy deploy{d_dynamicConfigModes=
+      SM.fromList $
+        (SM.toList $ getDefaultDConfigModes $ tc_dynamicConfigSources tcfg)
+        <> (SM.toList $ d_dynamicConfigModes deploy)
+        <> [(dcname, dcmode)]
+    }
+
 
 -- | Update local state to reflect the master state from S3
 slaveUpdate :: Maybe Int -> IOR ()

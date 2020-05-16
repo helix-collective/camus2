@@ -7,6 +7,7 @@ module ADL.Release(
 import ADL.Core
 import Control.Applicative( (<$>), (<*>), (<|>) )
 import Prelude( ($) )
+import qualified ADL.Sys.Types
 import qualified ADL.Types
 import qualified Data.Aeson as JS
 import qualified Data.HashMap.Strict as HM
@@ -19,11 +20,12 @@ data ReleaseConfig = ReleaseConfig
     , rc_prestartCommand :: T.Text
     , rc_startCommand :: T.Text
     , rc_stopCommand :: T.Text
+    , rc_ctxJson :: (ADL.Sys.Types.Maybe T.Text)
     }
     deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
 
 mkReleaseConfig :: [ADL.Types.FilePath] -> T.Text -> T.Text -> T.Text -> ReleaseConfig
-mkReleaseConfig templates prestartCommand startCommand stopCommand = ReleaseConfig templates prestartCommand startCommand stopCommand
+mkReleaseConfig templates prestartCommand startCommand stopCommand = ReleaseConfig templates prestartCommand startCommand stopCommand Prelude.Nothing
 
 instance AdlValue ReleaseConfig where
     atype _ = "release.ReleaseConfig"
@@ -33,6 +35,7 @@ instance AdlValue ReleaseConfig where
         , genField "prestartCommand" rc_prestartCommand
         , genField "startCommand" rc_startCommand
         , genField "stopCommand" rc_stopCommand
+        , genField "ctxJson" rc_ctxJson
         ]
     
     jsonParser = ReleaseConfig
@@ -40,3 +43,4 @@ instance AdlValue ReleaseConfig where
         <*> parseField "prestartCommand"
         <*> parseField "startCommand"
         <*> parseField "stopCommand"
+        <*> parseFieldDef "ctxJson" Prelude.Nothing

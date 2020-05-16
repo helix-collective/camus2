@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 module Util where
-  
+
 import qualified Data.Map as M
+import qualified Data.Maybe as MB
 import qualified ADL.Core.StringMap as SM
 import qualified Data.Aeson as JS
 import qualified Data.ByteString.Lazy as LBS
@@ -20,10 +21,21 @@ import qualified Blobs.Secrets as Secrets
 
 import qualified Control.Monad.Trans.AWS as AWS
 
-import ADL.Config(ToolConfig(..), DeployMode(..), JsonSource(..), ProxyModeConfig(..))
+import ADL.State(Deploy(..))
+import ADL.Config(ToolConfig(..), DeployMode(..), ProxyModeConfig(..))
+import ADL.Dconfig(
+  JsonSource(..),
+  DynamicConfigMode,
+  DynamicConfigName,
+  ConfigNameJsonSourceMap,
+  DynamicConfigNameJSrcMap,
+  DynamicConfigNameModeMap,
+  DynamicConfigNameMode(..),
+  DynamicJsonSource(..),
+  ConfigSource(..))
 import ADL.Release(ReleaseConfig(..))
 import ADL.Core(adlFromJsonFile', runJsonParser, textFromParseContext, AdlValue(..), ParseResult(..))
-import ADL.Types(StaticConfigName)
+import ADL.Types(StaticConfigName, ConfigName)
 import Blobs(releaseBlobStore, BlobStore(..), BlobName)
 import Blobs(releaseBlobStore, BlobStore(..), BlobName)
 import Codec.Archive.Zip(withArchive, unpackInto)
@@ -51,6 +63,13 @@ import Types(IOR, REnv(..), getToolConfig, scopeInfo, info)
 configContextCacheFilePath :: ToolConfig -> StaticConfigName -> FilePath
 configContextCacheFilePath tcfg name = T.unpack (tc_contextCache tcfg) </> T.unpack name <> ".json"
 
+configContextCacheFilePathDC :: ToolConfig -> DynamicConfigName -> DynamicConfigMode -> FilePath
+configContextCacheFilePathDC tcfg name mode = T.unpack (tc_contextCache tcfg) </> T.unpack name <> "_" <> T.unpack mode <> ".json"
+
+configContextCacheFilePath2 :: ToolConfig -> ConfigSource -> FilePath
+configContextCacheFilePath2 tcfg (Cs_static name) = configContextCacheFilePath tcfg name
+configContextCacheFilePath2 tcfg (Cs_dynamic (DynamicConfigNameMode name mode)) = configContextCacheFilePathDC tcfg name mode
+
 jsrcLabel :: JsonSource -> T.Text
 jsrcLabel (Jsrc_file file) = file
 jsrcLabel (Jsrc_s3 s3Path) = s3Path
@@ -65,55 +84,70 @@ fetchConfigContext retryAfter = do
     do
       liftIO $ createDirectoryIfMissing True (T.unpack (tc_contextCache tcfg))
 
+      for_ (M.toList (SM.toMap (tc_dynamicConfigSources tcfg))) $ \name_djsrc -> do
+        let name = fst name_djsrc
+        let djsrc = snd name_djsrc
+        for_ (M.toList (SM.toMap (djsrc_modes djsrc))) $ \mode_src -> do
+          let mode = fst mode_src
+          let src = snd mode_src
+          let cacheFilePath = configContextCacheFilePath2 tcfg (Cs_dynamic (DynamicConfigNameMode name mode))
+          case retryAfter of
+            Nothing -> return ()
+            Just delay -> await awsEnvFn src delay
+
+          info ("Downloading " <> T.pack cacheFilePath <> " from " <> jsrcLabel src)
+          jsrcFetchToFile awsEnvFn src cacheFilePath
+
       for_ (M.toList (SM.toMap (tc_configSources tcfg))) $ \name_src -> do
         let name = fst name_src
         let src = snd name_src
-        let cacheFilePath = configContextCacheFilePath tcfg name
+        let cacheFilePath = configContextCacheFilePath2 tcfg (Cs_static name)
         case retryAfter of
           Nothing -> return ()
           Just delay -> await awsEnvFn src delay
 
         info ("Downloading " <> T.pack cacheFilePath <> " from " <> jsrcLabel src)
         jsrcFetchToFile awsEnvFn src cacheFilePath
- where
-   await :: IOR AWS.Env -> JsonSource -> Int -> IOR ()
-   await awsEnvFn jsrc delaySecs = do
-     exists <- jsrcExists awsEnvFn jsrc
-     case exists of
-       True -> return ()
-       False -> do
-         info ("Waiting for "<> jsrcLabel jsrc)
-         liftIO $ threadDelay (1000000 * delaySecs)
-         await awsEnvFn jsrc delaySecs
+  where
+    await :: IOR AWS.Env -> JsonSource -> Int -> IOR ()
+    await awsEnvFn jsrc delaySecs = do
+      exists <- jsrcExists awsEnvFn jsrc
+      case exists of
+        True -> return ()
+        False -> do
+          info ("Waiting for "<> jsrcLabel jsrc)
+          liftIO $ threadDelay (1000000 * delaySecs)
+          await awsEnvFn jsrc delaySecs
 
-   jsrcExists :: IOR AWS.Env -> JsonSource -> IOR Bool
-   jsrcExists _ (Jsrc_file file) = do
-     liftIO $ doesFileExist (T.unpack file)
-   jsrcExists awsEnvFn (Jsrc_s3 s3Path) = do
-     env <- awsEnvFn
-     let (bucket,key)  = S3.splitPath s3Path
-     liftIO $ S3.objectExists env bucket key
-   jsrcExists awsEnvFn (Jsrc_awsSecretArn arn) = do
-     env <- awsEnvFn
-     liftIO $ Secrets.secretExists env arn
+    jsrcExists :: IOR AWS.Env -> JsonSource -> IOR Bool
+    jsrcExists _ (Jsrc_file file) = do
+      liftIO $ doesFileExist (T.unpack file)
+    jsrcExists awsEnvFn (Jsrc_s3 s3Path) = do
+      env <- awsEnvFn
+      let (bucket,key)  = S3.splitPath s3Path
+      liftIO $ S3.objectExists env bucket key
+    jsrcExists awsEnvFn (Jsrc_awsSecretArn arn) = do
+      env <- awsEnvFn
+      liftIO $ Secrets.secretExists env arn
 
-   jsrcFetchToFile :: IOR AWS.Env -> JsonSource -> FilePath -> IOR ()
-   jsrcFetchToFile _ (Jsrc_file fromFile) toFile = do
-     liftIO $ copyFile (T.unpack fromFile) toFile
-   jsrcFetchToFile awsEnvFn (Jsrc_s3 s3Path) toFile =  do
-     env <- awsEnvFn
-     let (bucket,key)  = S3.splitPath s3Path
-     liftIO $ S3.downloadFileFrom env bucket key toFile Nothing
-   jsrcFetchToFile awsEnvFn (Jsrc_awsSecretArn arn) toFile = do
-     env <- awsEnvFn
-     liftIO $ Secrets.downloadSecretFrom env arn toFile
+    jsrcFetchToFile :: IOR AWS.Env -> JsonSource -> FilePath -> IOR ()
+    jsrcFetchToFile _ (Jsrc_file fromFile) toFile = do
+      liftIO $ copyFile (T.unpack fromFile) toFile
+    jsrcFetchToFile awsEnvFn (Jsrc_s3 s3Path) toFile =  do
+      env <- awsEnvFn
+      let (bucket,key)  = S3.splitPath s3Path
+      liftIO $ S3.downloadFileFrom env bucket key toFile Nothing
+    jsrcFetchToFile awsEnvFn (Jsrc_awsSecretArn arn) toFile = do
+      env <- awsEnvFn
+      liftIO $ Secrets.downloadSecretFrom env arn toFile
 
-injectContext :: (JS.Value -> JS.Value) -> FilePath -> FilePath -> IOR()
-injectContext modifyContextFn templatePath destPath = do
+-- doesn't support ports or dynamic configs (remove?)
+injectContextLegacy :: (JS.Value -> JS.Value) -> FilePath -> FilePath -> IOR()
+injectContextLegacy modifyContextFn templatePath destPath = do
   tcfg <- getToolConfig
   liftIO $ do
     -- load and merge the infrastructure context
-    ctx <- fmap modifyContextFn (loadMergedContext tcfg)
+    ctx <- fmap modifyContextFn (loadMergedContextLegacy tcfg)
 
     -- interpolate the context into each templated file
     expandTemplateFileToDest ctx templatePath destPath
@@ -122,8 +156,8 @@ injectContext modifyContextFn templatePath destPath = do
 --
 -- `modifyContextFn` can be used to modify the context before it is used to
 -- expand templates
-unpackRelease :: (JS.Value -> JS.Value) -> T.Text -> FilePath -> IOR ()
-unpackRelease modifyContextFn release toDir = do
+unpackReleaseLegacy :: (JS.Value -> JS.Value) -> T.Text -> FilePath -> IOR ()
+unpackReleaseLegacy modifyContextFn release toDir = do
   scopeInfo ("Unpacking release " <> " to " <> T.pack toDir) $ do
     tcfg <- getToolConfig
     bs <- releaseBlobStore
@@ -141,11 +175,75 @@ unpackRelease modifyContextFn release toDir = do
       rcfg <- adlFromJsonFile' (toDir </> "release.json")
 
       -- load and merge the infrastructure context
-      ctx <- fmap modifyContextFn (loadMergedContext tcfg)
+      ctx <- fmap modifyContextFn (loadMergedContextLegacy tcfg)
+
+      -- save raw json context (if enabled)
+      saveJsonContext rcfg toDir ctx
 
       -- interpolate the context into each templated file
       for_ (rc_templates rcfg) $ \templatePath -> do
         expandTemplateFile ctx (toDir </> T.unpack templatePath)
+
+
+-- unpack a release into the specified directory, and expand any templates
+--
+-- `modifyContextFn` can be used to modify the context before it is used to
+-- expand templates
+unpackRelease :: (JS.Value -> JS.Value) -> T.Text -> FilePath -> Deploy -> IOR ()
+unpackRelease modifyContextFn release toDir deploy = do
+  scopeInfo ("Unpacking release " <> " to " <> T.pack toDir) $ do
+    tcfg <- getToolConfig
+    bs <- releaseBlobStore
+    liftIO $ do
+      let releaseFilePath = toDir </> T.unpack release
+      createDirectoryIfMissing True toDir
+
+      -- download the release zip file
+      bs_fetchToFile bs release releaseFilePath
+
+      -- expand the zip file
+      withArchive releaseFilePath (unpackInto toDir)
+
+      -- load the release metadata
+      rcfg <- adlFromJsonFile' (toDir </> "release.json")
+
+      -- load and merge the infrastructure context
+      ctx <- fmap modifyContextFn (loadMergedContext tcfg deploy)
+
+      -- save raw json context (if enabled)
+      saveJsonContext rcfg toDir ctx
+
+      -- interpolate the context into each templated file
+      for_ (rc_templates rcfg) $ \templatePath -> do
+        expandTemplateFile ctx (toDir </> T.unpack templatePath)
+
+-- expand any templates
+-- `modifyContextFn` can be used to modify the context before it is used to
+-- expand templates
+reconfigRunningDeploy :: (JS.Value -> JS.Value) -> T.Text -> FilePath -> Deploy -> IOR ()
+reconfigRunningDeploy modifyContextFn release toDir deployment = do
+  scopeInfo ("Reconfiguring release " <> " in " <> T.pack toDir) $ do
+    tcfg <- getToolConfig
+    bs <- releaseBlobStore
+    liftIO $ do
+      -- load the release metadata
+      rcfg <- adlFromJsonFile' (toDir </> "release.json")
+
+      -- load and merge the infrastructure context
+      ctx <- fmap modifyContextFn (loadMergedContext tcfg deployment)
+
+      -- save raw json context (if enabled)
+      saveJsonContext rcfg toDir ctx
+
+      -- interpolate the context into each templated file
+      for_ (rc_templates rcfg) $ \templatePath -> do
+        expandTemplateFile ctx (toDir </> T.unpack templatePath)
+
+saveJsonContext :: ReleaseConfig -> FilePath -> JS.Value -> IO ()
+saveJsonContext rcfg toDir ctx = do
+  case rc_ctxJson rcfg of
+    Just name -> JS.encodeFile (toDir </> (T.unpack name)) ctx
+    Nothing -> return ()
 
 checkReleaseExists :: T.Text -> IOR ()
 checkReleaseExists release = do
@@ -155,8 +253,8 @@ checkReleaseExists release = do
     error ("Release " <> T.unpack release <> " does not exist in release store at " <> T.unpack (bs_label bs ))
   return ()
 
-loadMergedContext :: ToolConfig -> IO JS.Value
-loadMergedContext tcfg = do
+loadMergedContextLegacy :: ToolConfig -> IO JS.Value
+loadMergedContextLegacy tcfg = do
   let cacheDir = T.unpack (tc_contextCache tcfg)
 
   values <- for (M.toList (SM.toMap (tc_configSources tcfg))) $ \name_src -> do
@@ -169,6 +267,61 @@ loadMergedContext tcfg = do
      (Right jv) -> return (takeBaseName cacheFilePath, jv)
 
   return (JS.Object (HM.fromList ([(T.pack file,jv) | (file,jv) <- values]) ))
+
+resolveDynConfigs :: ToolConfig -> Deploy -> [ConfigSource]
+resolveDynConfigs tcfg deploy = fromStringMaps (tc_dynamicConfigSources tcfg) (d_dynamicConfigModes deploy)
+    where
+        fromStringMaps :: DynamicConfigNameJSrcMap -> DynamicConfigNameModeMap -> [ConfigSource]
+        fromStringMaps namestomodestojsrc namestomode = fromDynamicJsonSource (SM.toMap namestomodestojsrc) (SM.toMap namestomode)
+
+        fromDynamicJsonSource :: M.Map ConfigName DynamicJsonSource -> M.Map ConfigName DynamicConfigMode -> [ConfigSource]
+        fromDynamicJsonSource namestomodestojsrc namestomode = toCsList $ doubleMap1 (M.map (SM.toMap . djsrc_modes) namestomodestojsrc) namestomode
+
+        toCsList :: M.Map ConfigName (DynamicConfigMode,JsonSource)  -> [ConfigSource]
+        toCsList m = map (\namemodesrc -> Cs_dynamic (DynamicConfigNameMode (fst namemodesrc) (fst (snd namemodesrc)))) (M.assocs m)
+
+        doubleMap1 :: (Ord k, Ord x) => M.Map k (M.Map x v) -> M.Map k x -> M.Map k (x,v)
+        doubleMap1 ktoxtov ktox = M.map MB.fromJust (doubleMap2 ktoxtov ktox)
+
+        doubleMap2 :: (Ord k, Ord x) => M.Map k (M.Map x v) -> M.Map k x -> M.Map k (MB.Maybe (x,v))
+        doubleMap2 ktoxtov ktox = M.mapWithKey (doubleMap3 ktoxtov) ktox
+
+        doubleMap3 :: (Ord k, Ord x) => M.Map k (M.Map x v) -> k -> x -> MB.Maybe (x,v)
+        doubleMap3 ktoxtov k x = doubleMap4 x (M.lookup k ktoxtov)
+
+        doubleMap4 :: Ord x => x -> MB.Maybe (M.Map x v) -> MB.Maybe (x,v)
+        doubleMap4 x mxtov = case mxtov of
+            Nothing -> Nothing
+            (Just xtov) -> Just (x, MB.fromJust (M.lookup x xtov))
+
+resolveStaticConfigs :: ToolConfig -> Deploy -> [ConfigSource]
+resolveStaticConfigs tcfg _ = fromStringMaps (tc_configSources tcfg)
+    where
+        fromStringMaps :: ConfigNameJsonSourceMap -> [ConfigSource]
+        fromStringMaps namestojsrc = toCsList (SM.toMap namestojsrc)
+
+        toCsList :: M.Map ConfigName JsonSource -> [ConfigSource]
+        toCsList m = map (\namesrc -> Cs_static ((fst namesrc))) (M.assocs m)
+
+resolveConfigs :: ToolConfig -> Deploy -> [ConfigSource]
+resolveConfigs tcfg deploy = (resolveStaticConfigs tcfg deploy) <> (resolveDynConfigs tcfg deploy)
+
+getContextName :: ConfigSource -> T.Text
+getContextName (Cs_static name) = name
+getContextName (Cs_dynamic (DynamicConfigNameMode name _)) = name
+
+loadMergedContext :: ToolConfig -> Deploy -> IO JS.Value
+loadMergedContext tcfg deploy = do
+  let cacheDir = T.unpack (tc_contextCache tcfg)
+
+  values <- for (resolveConfigs tcfg deploy) $ \cfgsrc -> do
+    let cacheFilePath = configContextCacheFilePath2 tcfg cfgsrc
+    lbs <- LBS.readFile cacheFilePath
+    case JS.eitherDecode' lbs of
+      (Left e) -> error ("Unable to parse json from " <> cacheFilePath)
+      (Right jv) -> return (getContextName cfgsrc, jv)
+
+  return (JS.Object (HM.fromList ([(name,jv) | (name,jv) <- values]) ))
 
 expandTemplateFileToDest :: JS.Value -> FilePath -> FilePath -> IO ()
 expandTemplateFileToDest ctx templatePath destPath = do

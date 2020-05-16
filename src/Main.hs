@@ -15,6 +15,8 @@ import qualified Util as U
 import qualified Log as L
 
 import ADL.Config(ToolConfig(..), LetsEncryptConfig(..), DeployMode(..), ProxyModeConfig(..))
+import ADL.Types(DeployLabel, ReleaseLabel, ConfigName)
+import ADL.Dconfig(DynamicConfigName, DynamicConfigMode)
 import ADL.Core(adlFromByteString, AdlValue)
 import Blobs(releaseBlobStore, BlobStore(..))
 import Commands.ProxyMode.LocalState(nginxConfTemplate)
@@ -53,6 +55,7 @@ data Command
   | Stop T.Text
   | Connect (T.Text,T.Text)
   | Disconnect T.Text
+  | Reconfig (DeployLabel,T.Text)
   | RestartFrontendProxy
   | ShutdownFrontendProxy
   | GenerateSslCertificate
@@ -96,6 +99,8 @@ commandParser = subparser
      (info' startParser "Create and start a deployment (if it's not already running)")
   <> command "stop"
      (info' stopParser "Stop and remove a deployment")
+  <> command "reconfig"
+     (info' reconfigParser "Update a dynamic config of a deployment")
   <> command "connect"
      (info' connectParser "Connect an endpoint to a running deployment")
   <> command "disconnect"
@@ -161,6 +166,11 @@ startParser = Start <$> arguments
 stopParser :: Parser Command
 stopParser = Stop <$> deployArgument
 
+reconfigParser :: Parser Command
+reconfigParser = Reconfig <$> arguments
+ where
+  arguments = (,) <$> deployArgument <*> dynConfigNameModeArgument
+
 connectParser :: Parser Command
 connectParser = Connect <$> arguments
  where
@@ -203,6 +213,12 @@ deployArgument = argument str
   <> completer (mkCompleter completeRunningDeploys)
   )
 
+dynConfigNameModeArgument :: Parser T.Text
+dynConfigNameModeArgument = argument str
+  (  metavar "DYNCONFIGNAMEMODE"
+  -- <> completer ... todo: completer on available dynconfig name,mode values
+  )
+
 endpointArgument :: Parser T.Text
 endpointArgument = argument str
   (  metavar "ENDPOINT"
@@ -226,12 +242,15 @@ runCommand ShowDefaultNginxConfig = C.showDefaultNginxConfig
 runCommand (ShowConfigModes Nothing) = runWithConfig (C.listConfigsModes)
 runCommand (ShowConfigModes (Just dynamicConfigName)) = runWithConfig (C.showConfigModes dynamicConfigName)
 runCommand (FetchContext retry) = runWithConfigAndLog (U.fetchConfigContext retry)
-runCommand (UnpackRelease (release,toDir)) = runWithConfigAndLog (U.unpackRelease id release toDir)
-runCommand (ExpandTemplate (templatePath,destPath)) = runWithConfigAndLog (U.injectContext id templatePath destPath)
+runCommand (UnpackRelease (release,toDir)) = runWithConfigAndLog (U.unpackReleaseLegacy id release toDir)
+runCommand (ExpandTemplate (templatePath,destPath)) = runWithConfigAndLog (U.injectContextLegacy id templatePath destPath)
 runCommand AwsDockerLoginCmd = runWithConfigAndLog (C.awsDockerLoginCmd)
 runCommand (Status showSlaves) = runWithConfig (P.showStatus showSlaves)
 runCommand (Start (release,Nothing)) = runWithConfigAndLog (C.createAndStart release release)
 runCommand (Start (release,Just asDeploy)) = runWithConfigAndLog (C.createAndStart release asDeploy)
+
+runCommand (Reconfig (deployLabel, dcNameMode)) = runWithConfigAndLog (C.reconfigDeploy deployLabel dcNameMode)
+
 runCommand (Stop deploy) = runWithConfigAndLog (C.stopDeploy deploy)
 runCommand (Connect (endpoint,deploy)) = runWithConfigAndLog (P.connect endpoint deploy)
 runCommand (Disconnect endpoint) = runWithConfigAndLog (P.disconnect endpoint)

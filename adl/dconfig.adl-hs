@@ -1,0 +1,8 @@
+module dconfig
+{
+import adlc.config.haskell.HaskellFieldPrefix;
+
+annotation JsonSource HaskellFieldPrefix "jsrc_";
+annotation DynamicJsonSource HaskellFieldPrefix "djsrc_";
+annotation ConfigSource HaskellFieldPrefix "cs_";
+};

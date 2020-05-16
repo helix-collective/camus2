@@ -5,6 +5,7 @@ ADL/Core/Nullable.hs
 ADL/Core/StringMap.hs
 ADL/Core/TypeToken.hs
 ADL/Core/Value.hs
+ADL/Dconfig.hs
 ADL/Nginx.hs
 ADL/Release.hs
 ADL/State.hs

@@ -1,6 +1,5 @@
 module types
 {
-
 /// Phantom Key type naming the string key type
 type StringKeyMap<Key,Value> = StringMap<Value>;
 
@@ -12,16 +11,12 @@ type EndPointLabel = String;
 
 type DeployLabel = String;
 
+type ReleaseLabel = String;
+
 /// ConfigName is a name of one of the keys of the top level object used for template interpolation
 type ConfigName = String;
 
 /// ConfigName as part of the static config - eg 'infrastructure' 'secrets'
 type StaticConfigName = ConfigName;
-
-/// ConfigName for switchable dynamic configs - eg 'queue' 'processing'
-type DynamicConfigName = ConfigName;
-
-/// Name of a mode of a dynamic config - eg 'active' 'inactive'
-type DynamicConfigMode = String;
 
 };

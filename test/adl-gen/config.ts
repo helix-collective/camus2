@@ -1,6 +1,7 @@
 /* @generated from adl module config */
 
 import * as ADL from './runtime/adl';
+import * as dconfig from './dconfig';
 import * as sys_types from './sys/types';
 import * as types from './types';
 
@@ -26,11 +27,11 @@ export interface ToolConfig {
   /**
    * Static config sources
    */
-  configSources: types.StringKeyMap<types.StaticConfigName, JsonSource>;
+  configSources: types.StringKeyMap<types.StaticConfigName, dconfig.JsonSource>;
   /**
    * Dynamic config sources
    */
-  dynamicConfigSources: types.StringKeyMap<types.DynamicConfigName, DynamicJsonSource>;
+  dynamicConfigSources: dconfig.DynamicConfigNameJSrcMap;
   deployMode: DeployMode;
   healthCheck: sys_types.Maybe<HealthCheckConfig>;
   /**
@@ -49,8 +50,8 @@ export function makeToolConfig(
     autoCertName?: string,
     autoCertContactEmail?: string,
     releases: BlobStoreConfig,
-    configSources?: types.StringKeyMap<types.StaticConfigName, JsonSource>,
-    dynamicConfigSources?: types.StringKeyMap<types.DynamicConfigName, DynamicJsonSource>,
+    configSources?: types.StringKeyMap<types.StaticConfigName, dconfig.JsonSource>,
+    dynamicConfigSources?: dconfig.DynamicConfigNameJSrcMap,
     deployMode?: DeployMode,
     healthCheck?: sys_types.Maybe<HealthCheckConfig>,
     nginxDockerVersion?: string,
@@ -74,7 +75,7 @@ export function makeToolConfig(
 }
 
 const ToolConfig_AST : ADL.ScopedDecl =
-  {"moduleName":"config","decl":{"annotations":[],"type_":{"kind":"struct_","value":{"typeParams":[],"fields":[{"annotations":[],"serializedName":"deploysDir","default":{"kind":"just","value":"/opt/deploys"},"name":"deploysDir","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"contextCache","default":{"kind":"just","value":"/opt/config"},"name":"contextCache","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"logFile","default":{"kind":"just","value":"/opt/var/log/camus2.log"},"name":"logFile","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"letsencryptPrefixDir","default":{"kind":"just","value":"/opt"},"name":"letsencryptPrefixDir","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"letsencryptWwwDir","default":{"kind":"just","value":"/opt/var/www"},"name":"letsencryptWwwDir","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"autoCertName","default":{"kind":"just","value":"camus2cert"},"name":"autoCertName","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}},{"annotations":[],"serializedName":"autoCertContactEmail","default":{"kind":"just","value":""},"name":"autoCertContactEmail","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}},{"annotations":[],"serializedName":"releases","default":{"kind":"nothing"},"name":"releases","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"BlobStoreConfig"}},"parameters":[]}},{"annotations":[],"serializedName":"configSources","default":{"kind":"just","value":{}},"name":"configSources","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"StringKeyMap"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"StaticConfigName"}},"parameters":[]},{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"JsonSource"}},"parameters":[]}]}},{"annotations":[],"serializedName":"dynamicConfigSources","default":{"kind":"just","value":{}},"name":"dynamicConfigSources","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"StringKeyMap"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"DynamicConfigName"}},"parameters":[]},{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"DynamicJsonSource"}},"parameters":[]}]}},{"annotations":[],"serializedName":"deployMode","default":{"kind":"just","value":"noproxy"},"name":"deployMode","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"DeployMode"}},"parameters":[]}},{"annotations":[],"serializedName":"healthCheck","default":{"kind":"just","value":{"just":{"outgoingPath":"/","incomingPath":"/health-check"}}},"name":"healthCheck","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"sys.types","name":"Maybe"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"HealthCheckConfig"}},"parameters":[]}]}},{"annotations":[],"serializedName":"nginxDockerVersion","default":{"kind":"just","value":"1.16.1"},"name":"nginxDockerVersion","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}}]}},"name":"ToolConfig","version":{"kind":"nothing"}}};
+  {"moduleName":"config","decl":{"annotations":[],"type_":{"kind":"struct_","value":{"typeParams":[],"fields":[{"annotations":[],"serializedName":"deploysDir","default":{"kind":"just","value":"/opt/deploys"},"name":"deploysDir","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"contextCache","default":{"kind":"just","value":"/opt/config"},"name":"contextCache","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"logFile","default":{"kind":"just","value":"/opt/var/log/camus2.log"},"name":"logFile","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"letsencryptPrefixDir","default":{"kind":"just","value":"/opt"},"name":"letsencryptPrefixDir","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"letsencryptWwwDir","default":{"kind":"just","value":"/opt/var/www"},"name":"letsencryptWwwDir","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"autoCertName","default":{"kind":"just","value":"camus2cert"},"name":"autoCertName","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}},{"annotations":[],"serializedName":"autoCertContactEmail","default":{"kind":"just","value":""},"name":"autoCertContactEmail","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}},{"annotations":[],"serializedName":"releases","default":{"kind":"nothing"},"name":"releases","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"BlobStoreConfig"}},"parameters":[]}},{"annotations":[],"serializedName":"configSources","default":{"kind":"just","value":{}},"name":"configSources","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"StringKeyMap"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"StaticConfigName"}},"parameters":[]},{"typeRef":{"kind":"reference","value":{"moduleName":"dconfig","name":"JsonSource"}},"parameters":[]}]}},{"annotations":[],"serializedName":"dynamicConfigSources","default":{"kind":"just","value":{}},"name":"dynamicConfigSources","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"dconfig","name":"DynamicConfigNameJSrcMap"}},"parameters":[]}},{"annotations":[],"serializedName":"deployMode","default":{"kind":"just","value":"noproxy"},"name":"deployMode","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"DeployMode"}},"parameters":[]}},{"annotations":[],"serializedName":"healthCheck","default":{"kind":"just","value":{"just":{"outgoingPath":"/","incomingPath":"/health-check"}}},"name":"healthCheck","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"sys.types","name":"Maybe"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"HealthCheckConfig"}},"parameters":[]}]}},{"annotations":[],"serializedName":"nginxDockerVersion","default":{"kind":"just","value":"1.16.1"},"name":"nginxDockerVersion","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}}]}},"name":"ToolConfig","version":{"kind":"nothing"}}};
 
 export const snToolConfig: ADL.ScopedName = {moduleName:"config", name:"ToolConfig"};
 
@@ -359,90 +360,6 @@ export function texprSslCertPaths(): ADL.ATypeExpr<SslCertPaths> {
   return {value : {typeRef : {kind: "reference", value : snSslCertPaths}, parameters : []}};
 }
 
-export interface JsonSource_File {
-  kind: 'file';
-  value: types.FilePath;
-}
-export interface JsonSource_S3 {
-  kind: 's3';
-  value: types.S3Path;
-}
-export interface JsonSource_AwsSecretArn {
-  kind: 'awsSecretArn';
-  value: string;
-}
-
-/**
- * Methods of providing text for a config context
- */
-export type JsonSource = JsonSource_File | JsonSource_S3 | JsonSource_AwsSecretArn;
-
-export interface JsonSourceOpts {
-  file: types.FilePath;
-  /**
-   * Context from an S3 object
-   */
-  s3: types.S3Path;
-  /**
-   * Context from AWS secrets manager secret
-   */
-  awsSecretArn: string;
-}
-
-export function makeJsonSource<K extends keyof JsonSourceOpts>(kind: K, value: JsonSourceOpts[K]) { return {kind, value}; }
-
-const JsonSource_AST : ADL.ScopedDecl =
-  {"moduleName":"config","decl":{"annotations":[],"type_":{"kind":"union_","value":{"typeParams":[],"fields":[{"annotations":[],"serializedName":"file","default":{"kind":"nothing"},"name":"file","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"s3","default":{"kind":"nothing"},"name":"s3","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"S3Path"}},"parameters":[]}},{"annotations":[],"serializedName":"awsSecretArn","default":{"kind":"nothing"},"name":"awsSecretArn","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}}]}},"name":"JsonSource","version":{"kind":"nothing"}}};
-
-export const snJsonSource: ADL.ScopedName = {moduleName:"config", name:"JsonSource"};
-
-export function texprJsonSource(): ADL.ATypeExpr<JsonSource> {
-  return {value : {typeRef : {kind: "reference", value : snJsonSource}, parameters : []}};
-}
-
-/**
- * A config source that can be changed to different named Modes at runtime.
- */
-export interface DynamicJsonSource {
-  defaultMode: types.DynamicConfigMode;
-  modes: types.StringKeyMap<types.DynamicConfigMode, JsonSource>;
-}
-
-export function makeDynamicJsonSource(
-  input: {
-    defaultMode: types.DynamicConfigMode,
-    modes: types.StringKeyMap<types.DynamicConfigMode, JsonSource>,
-  }
-): DynamicJsonSource {
-  return {
-    defaultMode: input.defaultMode,
-    modes: input.modes,
-  };
-}
-
-const DynamicJsonSource_AST : ADL.ScopedDecl =
-  {"moduleName":"config","decl":{"annotations":[],"type_":{"kind":"struct_","value":{"typeParams":[],"fields":[{"annotations":[],"serializedName":"defaultMode","default":{"kind":"nothing"},"name":"defaultMode","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"DynamicConfigMode"}},"parameters":[]}},{"annotations":[],"serializedName":"modes","default":{"kind":"nothing"},"name":"modes","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"StringKeyMap"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"DynamicConfigMode"}},"parameters":[]},{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"JsonSource"}},"parameters":[]}]}}]}},"name":"DynamicJsonSource","version":{"kind":"nothing"}}};
-
-export const snDynamicJsonSource: ADL.ScopedName = {moduleName:"config", name:"DynamicJsonSource"};
-
-export function texprDynamicJsonSource(): ADL.ATypeExpr<DynamicJsonSource> {
-  return {value : {typeRef : {kind: "reference", value : snDynamicJsonSource}, parameters : []}};
-}
-
-/**
- * Listing of available modes per configName
- */
-export type DynamicConfigOptions = types.StringKeyMap<types.DynamicConfigName, sys_types.Set<types.DynamicConfigMode>>;
-
-const DynamicConfigOptions_AST : ADL.ScopedDecl =
-  {"moduleName":"config","decl":{"annotations":[],"type_":{"kind":"type_","value":{"typeParams":[],"typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"StringKeyMap"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"DynamicConfigName"}},"parameters":[]},{"typeRef":{"kind":"reference","value":{"moduleName":"sys.types","name":"Set"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"DynamicConfigMode"}},"parameters":[]}]}]}}},"name":"DynamicConfigOptions","version":{"kind":"nothing"}}};
-
-export const snDynamicConfigOptions: ADL.ScopedName = {moduleName:"config", name:"DynamicConfigOptions"};
-
-export function texprDynamicConfigOptions(): ADL.ATypeExpr<DynamicConfigOptions> {
-  return {value : {typeRef : {kind: "reference", value : snDynamicConfigOptions}, parameters : []}};
-}
-
 export enum Verbosity {
   quiet,
   noisy,
@@ -528,9 +445,6 @@ export const _AST_MAP: { [key: string]: ADL.ScopedDecl } = {
   "config.EndPointType" : EndPointType_AST,
   "config.SslCertMode" : SslCertMode_AST,
   "config.SslCertPaths" : SslCertPaths_AST,
-  "config.JsonSource" : JsonSource_AST,
-  "config.DynamicJsonSource" : DynamicJsonSource_AST,
-  "config.DynamicConfigOptions" : DynamicConfigOptions_AST,
   "config.Verbosity" : Verbosity_AST,
   "config.LetsEncryptConfig" : LetsEncryptConfig_AST
 };

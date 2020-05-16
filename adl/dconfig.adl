@@ -1,0 +1,51 @@
+module dconfig {
+  import types.StringKeyMap;
+  import types.ConfigName;
+  import types.FilePath;
+  import types.S3Path;
+  import sys.types.Set;
+
+  /// ConfigName for switchable dynamic configs - eg 'queue' 'processing'
+  type DynamicConfigName = ConfigName;
+
+  /// Name of a mode of a dynamic config - eg 'active' 'inactive'
+  type DynamicConfigMode = String;
+
+  /// A config source that can be changed to different named Modes at runtime.
+  struct DynamicJsonSource {
+    DynamicConfigMode defaultMode;
+
+    StringKeyMap<DynamicConfigMode, JsonSource> modes;
+  };
+
+  type DynamicConfigNameModeMap = StringKeyMap<DynamicConfigName, DynamicConfigMode>;
+  type DynamicConfigNameJSrcMap = StringKeyMap<DynamicConfigName, DynamicJsonSource>;
+
+  /// Listing of available modes per configName
+  type DynamicConfigOptions = StringKeyMap<DynamicConfigName, Set<DynamicConfigMode>>;
+
+  /// Methods of providing text for a config context
+  union JsonSource
+  {
+      // Context from a local file
+      FilePath file;
+
+      /// Context from an S3 object
+      S3Path s3;
+
+      /// Context from AWS secrets manager secret
+      String awsSecretArn;
+  };
+
+  type ConfigNameJsonSourceMap = StringKeyMap<ConfigName, JsonSource>;
+
+  struct DynamicConfigNameMode {
+    DynamicConfigName name;
+    DynamicConfigMode mode;
+  };
+
+  union ConfigSource {
+    ConfigName static;
+    DynamicConfigNameMode dynamic;
+  };
+};

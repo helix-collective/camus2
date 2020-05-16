@@ -19,8 +19,15 @@ import qualified Text.Mustache.Types as TM
 import qualified Commands.ProxyMode as P
 import qualified ADL.Sys.Types as ST
 
-import ADL.Config(ToolConfig(..), DeployMode(..), ProxyModeConfig(..), DynamicConfigOptions(..), DynamicJsonSource(..), JsonSource(..))
-import ADL.Types(DynamicConfigName, StringKeyMap, DynamicConfigMode)
+import ADL.Config(ToolConfig(..), DeployMode(..), ProxyModeConfig(..))
+import ADL.Dconfig(
+  DynamicConfigOptions(..),
+  DynamicConfigMode,
+  DynamicConfigName,
+  DynamicConfigNameJSrcMap(..),
+  DynamicJsonSource(..),
+  JsonSource(..))
+import ADL.Types(DeployLabel, ReleaseLabel)
 import ADL.Release(ReleaseConfig(..))
 import ADL.Core(adlFromJsonFile')
 import Blobs(releaseBlobStore, BlobStore(..))
@@ -47,19 +54,19 @@ import System.IO(stdout, withFile, hIsEOF, IOMode(..))
 import System.Process(callCommand)
 import Path(Path,Abs,Dir,File,parseAbsDir,parseAbsFile)
 import Types(IOR, REnv(..), getToolConfig, scopeInfo)
-import Util(unpackRelease, fetchConfigContext, jsrcLabel)
+import Util(unpackRelease, unpackReleaseLegacy, fetchConfigContext, jsrcLabel)
 import Util.Aws(mkAwsEnv)
 import Commands.ProxyMode.LocalState(nginxConfTemplate)
 
 -- Make the specified release the live release, replacing any existing release.
-createAndStart :: T.Text -> T.Text -> IOR ()
+createAndStart :: ReleaseLabel -> DeployLabel -> IOR ()
 createAndStart release  asDeploy = do
   tcfg <- getToolConfig
   case tc_deployMode tcfg of
     DeployMode_noproxy -> startNoProxy release
     _ -> P.createAndStart release asDeploy
 
-startNoProxy :: T.Text -> IOR ()
+startNoProxy :: ReleaseLabel -> IOR ()
 startNoProxy release = do
   scopeInfo ("Selecting active release " <> release) $ do
     tcfg <- getToolConfig
@@ -72,7 +79,7 @@ startNoProxy release = do
     liftIO $ createDirectoryIfMissing True newReleaseDir
 
     -- unpack new release
-    unpackRelease id release newReleaseDir
+    unpackReleaseLegacy id release newReleaseDir
 
     -- Run the prestart command first, to pull/download any dependences.
     -- we do the before stopping the existing release to minimise startup time.
@@ -99,14 +106,14 @@ startNoProxy release = do
         callCommand (T.unpack (rc_startCommand rcfg))
 
 -- Stop the specified deployment.
-stopDeploy :: T.Text -> IOR ()
+stopDeploy :: DeployLabel -> IOR ()
 stopDeploy deploy = do
   tcfg <- getToolConfig
   case tc_deployMode tcfg of
     DeployMode_noproxy -> stopNoProxy deploy
     _ -> P.stopAndRemove deploy
 
-stopNoProxy :: T.Text -> IOR ()
+stopNoProxy :: DeployLabel -> IOR ()
 stopNoProxy deploy = do
   tcfg <- getToolConfig
   --let newReleaseDir = T.unpack (tc_deploysDir tcfg) </> (takeBaseName (T.unpack deploy))
@@ -177,9 +184,7 @@ showDefaultNginxConfig :: IO ()
 showDefaultNginxConfig = do
   T.putStrLn nginxConfTemplate
 
-type DynamicConfigSources = (StringKeyMap DynamicConfigName DynamicJsonSource)
-
-listDynamicConfigOptions :: DynamicConfigSources -> DynamicConfigOptions
+listDynamicConfigOptions :: DynamicConfigNameJSrcMap -> DynamicConfigOptions
 listDynamicConfigOptions dcsrcs = SM.fromList (M.toList (M.map dynamicJsonSourceToSet (SM.toMap dcsrcs)))
   where
     dynamicJsonSourceToSet :: DynamicJsonSource -> ST.Set DynamicConfigMode
@@ -188,7 +193,7 @@ listDynamicConfigOptions dcsrcs = SM.fromList (M.toList (M.map dynamicJsonSource
 getConfigOptionsText :: DynamicConfigOptions -> [T.Text]
 getConfigOptionsText dcopts = map dcNameModesText (SM.toList dcopts)
   where
-    dcNameModesText :: (T.Text, ST.Set DynamicConfigMode) -> T.Text
+    dcNameModesText :: (DynamicConfigName, ST.Set DynamicConfigMode) -> T.Text
     dcNameModesText tupl = T.intercalate (T.pack ": ") [T.justifyLeft 10 ' ' (fst tupl), dcModesText (snd tupl)]
 
     dcModesText :: (ST.Set DynamicConfigMode) -> T.Text
@@ -214,3 +219,17 @@ showConfigModes :: DynamicConfigName -> IOR ()
 showConfigModes dcname = do
   tcfg <- getToolConfig
   liftIO $ printDynamicConfigOptionsSingle dcname (listDynamicConfigOptions (tc_dynamicConfigSources tcfg))
+
+-- Update the configuration of a deployment
+reconfigDeploy :: DeployLabel -> T.Text -> IOR ()
+reconfigDeploy deploy dcnamemodestr = do
+  tcfg <- getToolConfig
+  case tc_deployMode tcfg of
+    DeployMode_noproxy -> error (T.unpack ("dynamic config not implemented on non-proxy deployments"))
+    _ -> P.reconfig deploy (fst (splitToPair dcnamemodestr)) (snd (splitToPair dcnamemodestr))
+
+splitToPairSep :: T.Text -> T.Text -> (T.Text,T.Text)
+splitToPairSep sep pairstr = (head $ T.splitOn sep pairstr, head $ tail $ T.splitOn sep pairstr)
+
+splitToPair :: T.Text -> (T.Text,T.Text)
+splitToPair = splitToPairSep (T.pack ",")
