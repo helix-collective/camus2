@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
+import qualified Data.Map as M
+import qualified Data.Set as Set
 import qualified ADL.Core.StringMap as SM
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -16,7 +18,7 @@ import qualified Log as L
 
 import ADL.Config(ToolConfig(..), LetsEncryptConfig(..), DeployMode(..), ProxyModeConfig(..))
 import ADL.Types(DeployLabel, ReleaseLabel, ConfigName)
-import ADL.Dconfig(DynamicConfigName, DynamicConfigMode)
+import ADL.Dconfig(DynamicConfigName, DynamicConfigMode, DynamicConfigOptions)
 import ADL.Core(adlFromByteString, AdlValue)
 import Blobs(releaseBlobStore, BlobStore(..))
 import Commands.ProxyMode.LocalState(nginxConfTemplate)
@@ -216,7 +218,7 @@ deployArgument = argument str
 dynConfigNameModeArgument :: Parser T.Text
 dynConfigNameModeArgument = argument str
   (  metavar "DYNCONFIGNAMEMODE"
-  -- <> completer ... todo: completer on available dynconfig name,mode values
+  -- <> completer (mkCompleter completeDynConfigNamesModes)
   )
 
 endpointArgument :: Parser T.Text
@@ -285,6 +287,33 @@ completeConfiguredEndpoints prefix = evalWithConfig $ do
        let endpoints = map (T.unpack . fst) (SM.toList (pm_endPoints pm))
        return (filter (isPrefixOf prefix) endpoints)
      _ -> return []
+
+
+
+dconfigOptsToPairs :: DynamicConfigOptions -> [String]
+dconfigOptsToPairs dcopts = fromMapSet (SM.toMap dcopts)
+  where
+    fromMapSet :: M.Map DynamicConfigName (Set.Set DynamicConfigMode) -> [String]
+    fromMapSet m = fromMapList (M.map Set.toList m)
+
+    fromMapList :: M.Map DynamicConfigName [DynamicConfigMode] -> [String]
+    fromMapList m = fromListPairs (M.assocs m)
+
+    fromListPairs :: [(DynamicConfigName,[DynamicConfigMode])] -> [String]
+    fromListPairs m = map T.unpack (concat (map (\x -> toCommaSep (fst x) (snd x)) m))
+
+    toCommaSep :: DynamicConfigName -> [DynamicConfigMode] -> [T.Text]
+    toCommaSep name modes = map (\mode -> name <> T.pack "," <> mode) modes
+
+-- Function called to bash complete dynamic config "name,mode" pairs
+completeDynConfigNamesModes :: String -> IO [String]
+completeDynConfigNamesModes prefix = evalWithConfig $ do
+  tcfg <- getToolConfig
+  case tc_deployMode tcfg of
+    DeployMode_proxy pm -> do
+      let dcfgOpts = C.listDynamicConfigOptions (tc_dynamicConfigSources tcfg)
+      return (filter (isPrefixOf prefix) (dconfigOptsToPairs dcfgOpts))
+    _ -> return []
 
 helpCmd :: IO ()
 helpCmd = do
