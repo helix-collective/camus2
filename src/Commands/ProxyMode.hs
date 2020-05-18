@@ -8,6 +8,7 @@ module Commands.ProxyMode(
   slaveFlush,
   slaveUpdate,
   restartProxy,
+  shutdownProxy,
   generateSslCertificate,
   runningDeploys,
   ) where
@@ -31,7 +32,7 @@ import ADL.State(State(..), Deploy(..), SlaveState(..), SlaveStatus(..))
 import ADL.Types(EndPointLabel, DeployLabel)
 import Util(unpackRelease,fetchConfigContext, checkReleaseExists)
 import Commands.ProxyMode.Types
-import Commands.ProxyMode.LocalState(localState, restartLocalProxy, generateLocalSslCertificate)
+import Commands.ProxyMode.LocalState(localState, restartLocalProxy, shutdownLocalProxy, generateLocalSslCertificate)
 import Commands.ProxyMode.RemoteState(remoteState, writeSlaveState, masterS3Path, flushSlaveStates)
 import Control.Concurrent(threadDelay)
 import Control.Exception(throwIO, SomeException)
@@ -199,11 +200,11 @@ getSlaveIP interfaceName interfaces = do
   case interfaceByName of
     interface:_ -> ( T.pack . show . ipv4 ) interface
     _ -> (T.pack "Network Interface " <> interfaceName <> "not found" )
-    where 
-      interfaceByName = filterNetworkInterfaces interfaceName interfaces 
+    where
+      interfaceByName = filterNetworkInterfaces interfaceName interfaces
 
       filterNetworkInterfaces ::  T.Text -> [NetworkInterface] ->  [NetworkInterface]
-      filterNetworkInterfaces interfaceName interfaces = filter (\x -> name x == (T.unpack interfaceName) ) interfaces    
+      filterNetworkInterfaces interfaceName interfaces = filter (\x -> name x == (T.unpack interfaceName) ) interfaces
 
 -- Flash slave state from S3 that is more than 5 minutes old
 slaveFlush :: IOR ()
@@ -251,6 +252,13 @@ restartProxy = do
   pm <- getProxyModeConfig
   case pm_remoteStateS3 pm of
     Nothing -> restartLocalProxy
+    _ -> return ()
+
+shutdownProxy :: IOR ()
+shutdownProxy = do
+  pm <- getProxyModeConfig
+  case pm_remoteStateS3 pm of
+    Nothing -> shutdownLocalProxy
     _ -> return ()
 
 generateSslCertificate :: IOR ()
