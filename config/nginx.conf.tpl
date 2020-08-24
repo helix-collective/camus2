@@ -9,6 +9,11 @@ worker_connections  1024;
 }
 
 http {
+  map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+  }
+
   include       /etc/nginx/mime.types;
   default_type  application/octet-stream;
 
@@ -53,6 +58,9 @@ http {
       proxy_pass http://localhost:{{port}};
       proxy_send_timeout          300;
       proxy_read_timeout          300;
+      proxy_http_version 1.1;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection $connection_upgrade;
     }
   }
 {{/port}}
@@ -74,7 +82,7 @@ http {
         alias {{letsencryptWwwDir}}/.well-known/acme-challenge;
     }
     location / {
-      return 301 https://$server_name$request_uri;
+      return 301 https://$host$request_uri;
     }
   }
   server {
@@ -89,6 +97,9 @@ http {
       proxy_pass http://localhost:{{port}};
       proxy_send_timeout          300;
       proxy_read_timeout          300;
+      proxy_http_version 1.1;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection $connection_upgrade;
     }
   }
 {{/port}}
