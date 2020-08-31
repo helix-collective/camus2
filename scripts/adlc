@@ -5,7 +5,7 @@
 
 set -e
 
-adlversion=0.13.2
+adlversion=0.13.8
 
 if [ "$(uname)" == "Darwin" ]; then
   platform=osx
