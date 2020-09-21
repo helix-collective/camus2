@@ -167,6 +167,94 @@ describe(`Run httpd-proxy-remote`, () => {
 
     console.log("stopping...");
   });
+
+  test("Config and deployment of multiple deploys of same release", async () => {
+    const releaseName = testSetup.randomstr + ".zip"
+    const testcontents =  "testcontentsA"
+    const releases = [
+      {
+        releaseName,
+        testcontents,
+      },
+    ];
+
+    const deploys = [
+      {
+        deployName: "deploy1",
+        endpoint: "main"
+      },
+            {
+        deployName: "deploy2",
+        endpoint: "other"
+      },
+    ];
+    const dataDirs = testSetup.dataDirs!;
+
+    // make several releases:
+    for (const rel of releases) {
+      await writeReleaseZip(
+        testSetup,
+        makeReleaseHttpdProxyMode(testSetup, rel.testcontents),
+        rel.releaseName
+      );
+    }
+
+    await writeToolConfig(testSetup, makeConfig(testSetup), "controller");
+    await writeToolConfig(testSetup, makeConfig(testSetup), "target");
+
+    const c2controller = new C2Exec(dataDirs, "controller");
+    const c2machine = new C2Exec(dataDirs, "target");
+
+    for (const dep of deploys) {
+      await c2controller.start(releaseName, dep.deployName);
+      await c2machine.connect(dep.endpoint, dep.deployName);
+    }
+
+    /// In deployment this happens on target machine periodically
+    // for test - just run once after updateing remote config
+    await c2machine.slaveUpdate();
+
+    for (const dep of deploys) {
+      expect(
+        await fsx.pathExists(
+          path.join(dataDirs.machineOptDeploys, dep.deployName, "started")
+        )
+      );
+      console.log("http get file test start");
+
+      const res = await promiseRetry(async (retry) => {
+        try {
+          console.log("try http get file test");
+          const res = await axios.get(
+            `http://${dep.endpoint}.localhost/${testfilePath}`
+          );
+          return res;
+        } catch (error) {
+          console.error("http get file test error, retrying...");
+          retry(error);
+        }
+      });
+
+      expect(res);
+      if (res) {
+        expect(res.data).toEqual(testcontents);
+      }
+    }
+
+    console.log("test OK");
+
+    for (const dep of deploys) {
+      await c2machine!.disconnect(dep.endpoint);
+      await c2machine!.stop(dep.deployName);
+    }
+
+    await c2machine.slaveUpdate();
+
+    // for test cleanup
+    await c2machine.terminate();
+
+    console.log("stopping...");
+  });
 });
 
 // problems with testing:
