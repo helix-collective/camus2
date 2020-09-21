@@ -22,6 +22,45 @@ to build a linux executable suitable for deployment. This script
 leaves a compressed executable at `/tmp/camus2.x86_64-linux.gz`
 
 
+# Testing
+
+The integration tests rely on localstack running under docker to simulate AWS. Also note
+that port 80 on localhost must be available for the tests to work. To run:
+
+Start localstack:
+
+```
+cd tests/localstack
+docker network prune
+docker-compose up -d
+```
+
+Confirm localstack is working (should complete without error):
+
+```
+export AWS_ACCESS_KEY_ID=DUMMY
+export AWS_SECRET_ACCESS_KEY=DUMMY
+aws --endpoint-url=http://localhost:4572 s3 ls
+```
+
+Run the tests:
+
+```
+export AWS_ACCESS_KEY_ID=DUMMY
+export AWS_SECRET_ACCESS_KEY=DUMMY
+cd tests
+yarn test
+```
+
+Finally, shut down localstack, and clean up networks
+
+```
+cd tests/localstack
+docker-compose down
+docker network prune
+```
+
+
 # Installation
 
 `camus2` is a standalone executable, which loads a single configuration

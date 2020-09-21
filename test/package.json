@@ -27,6 +27,6 @@
     "uuid": "^7.0.3"
   },
   "scripts": {
-    "test": "(cd localstack; docker-compose up -d); jest --verbose; (cd localstack; docker-compose down)"
+    "test": "jest --verbose"
   }
 }
