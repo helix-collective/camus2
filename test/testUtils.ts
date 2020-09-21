@@ -202,9 +202,10 @@ export function useLocalStack() {
     } else {
       console.log("using external localstack");
     }
-
+    const endpoint = `http://${localstack.host}:${localstack.port}`;
+    console.log("Connecting to AWS via ", endpoint);
     localstack.s3 = new AWS.S3({
-      endpoint: `http://${localstack.host}:${localstack.port}`,
+      endpoint
     });
     await retry(async function (retry, number) {
       try {
@@ -222,6 +223,7 @@ export function useLocalStack() {
             .promise();
         }
       } catch (error) {
+        console.log("Failed to create s3 bucket, retrying...:", JSON.stringify(localstack),  error);
         return retry(error);
       }
     });

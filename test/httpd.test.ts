@@ -78,7 +78,7 @@ for (const remoteMode of ["remote", "local"] as const) {
           );
           return res;
         } catch (error) {
-          console.error("http get file test error");
+          console.error("http get file test error, retrying ... ", error);
           retry(error);
         }
       });

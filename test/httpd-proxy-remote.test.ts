@@ -143,7 +143,7 @@ describe(`Run httpd-proxy-remote`, () => {
           );
           return res;
         } catch (error) {
-          console.error("http get file test error");
+          console.error("http get file test error, retrying...");
           retry(error);
         }
       });

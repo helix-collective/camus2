@@ -147,7 +147,7 @@ describe(`Run httpd-proxy-local`, () => {
           );
           return res;
         } catch (error) {
-          console.error("http get file test error");
+          console.error("http get file test error, retrying...");
           retry(error);
         }
       });
