@@ -17,11 +17,15 @@ export class C2Exec {
   async listReleases(): Promise<void> {
     await this.exec(["list-releases"]);
   }
-  async start(release: string): Promise<void> {
-    await this.exec(["start", release]);
+  async start(release: string, asDeploy?: string): Promise<void> {
+    if (asDeploy !== undefined) {
+      await this.exec(["start", release, asDeploy]);
+    } else {
+      await this.exec(["start", release]);
+    }
   }
-  async connect(endpoint: string, release: string): Promise<void> {
-    await this.exec(["connect", endpoint, release]);
+  async connect(endpoint: string, deploy: string): Promise<void> {
+    await this.exec(["connect", endpoint, deploy]);
   }
   async disconnect(endpoint: string): Promise<void> {
     await this.exec(["disconnect", endpoint]);
@@ -29,8 +33,8 @@ export class C2Exec {
   async slaveUpdate(): Promise<void> {
     await this.exec(["slave-update"]);
   }
-  async stop(release: string): Promise<void> {
-    await this.exec(["stop", release]);
+  async stop(deploy: string): Promise<void> {
+    await this.exec(["stop", deploy]);
   }
   async terminate(): Promise<void> {
     await this.exec(["shutdown-frontend-proxy"]);
