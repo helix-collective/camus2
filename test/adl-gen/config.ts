@@ -68,7 +68,7 @@ export function makeToolConfig(
     configSources: input.configSources === undefined ? {} : input.configSources,
     dynamicConfigSources: input.dynamicConfigSources === undefined ? {} : input.dynamicConfigSources,
     deployMode: input.deployMode === undefined ? {kind : "noproxy"} : input.deployMode,
-    healthCheck: input.healthCheck === undefined ? {kind : "just", value : {incomingPath : "/health-check", outgoingPath : "/"}} : input.healthCheck,
+    healthCheck: input.healthCheck === undefined ? {kind : "just", value : {incomingPath : "/health-check", outgoingPath : "/", endpoint : {kind : "nothing"}}} : input.healthCheck,
     nginxDockerVersion: input.nginxDockerVersion === undefined ? "1.16.1" : input.nginxDockerVersion,
   };
 }
@@ -199,22 +199,25 @@ export interface HealthCheckConfig {
    * configured endpoint
    */
   outgoingPath: string;
+  endpoint: sys_types.Maybe<types.EndPointLabel>;
 }
 
 export function makeHealthCheckConfig(
   input: {
     incomingPath: string,
     outgoingPath: string,
+    endpoint?: sys_types.Maybe<types.EndPointLabel>,
   }
 ): HealthCheckConfig {
   return {
     incomingPath: input.incomingPath,
     outgoingPath: input.outgoingPath,
+    endpoint: input.endpoint === undefined ? {kind : "nothing"} : input.endpoint,
   };
 }
 
 const HealthCheckConfig_AST : ADL.ScopedDecl =
-  {"moduleName":"config","decl":{"annotations":[],"type_":{"kind":"struct_","value":{"typeParams":[],"fields":[{"annotations":[],"serializedName":"incomingPath","default":{"kind":"nothing"},"name":"incomingPath","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}},{"annotations":[],"serializedName":"outgoingPath","default":{"kind":"nothing"},"name":"outgoingPath","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}}]}},"name":"HealthCheckConfig","version":{"kind":"nothing"}}};
+  {"moduleName":"config","decl":{"annotations":[],"type_":{"kind":"struct_","value":{"typeParams":[],"fields":[{"annotations":[],"serializedName":"incomingPath","default":{"kind":"nothing"},"name":"incomingPath","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}},{"annotations":[],"serializedName":"outgoingPath","default":{"kind":"nothing"},"name":"outgoingPath","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}},{"annotations":[],"serializedName":"endpoint","default":{"kind":"just","value":"nothing"},"name":"endpoint","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"sys.types","name":"Maybe"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"EndPointLabel"}},"parameters":[]}]}}]}},"name":"HealthCheckConfig","version":{"kind":"nothing"}}};
 
 export const snHealthCheckConfig: ADL.ScopedName = {moduleName:"config", name:"HealthCheckConfig"};
 

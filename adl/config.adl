@@ -84,9 +84,12 @@ struct HealthCheckConfig {
     /// a health check;
     String incomingPath;
 
-    /// The path to which will will proxy the above on the first
-    /// configured endpoint
+    /// The path to which will will proxy the above on the c2 deployment
     String outgoingPath;
+
+    // The name of the endpoint used for health checks. If nothing,
+    // the first endpoint (in name lexographic order will be used)
+    Maybe<EndPointLabel> endpoint = "nothing";
 };
 
 union MachineLabel {
