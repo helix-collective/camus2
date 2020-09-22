@@ -137,11 +137,12 @@ instance AdlValue EndPointType where
 data HealthCheckConfig = HealthCheckConfig
     { hc_incomingPath :: T.Text
     , hc_outgoingPath :: T.Text
+    , hc_endpoint :: (ADL.Sys.Types.Maybe ADL.Types.EndPointLabel)
     }
     deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
 
 mkHealthCheckConfig :: T.Text -> T.Text -> HealthCheckConfig
-mkHealthCheckConfig incomingPath outgoingPath = HealthCheckConfig incomingPath outgoingPath
+mkHealthCheckConfig incomingPath outgoingPath = HealthCheckConfig incomingPath outgoingPath Prelude.Nothing
 
 instance AdlValue HealthCheckConfig where
     atype _ = "config.HealthCheckConfig"
@@ -149,11 +150,13 @@ instance AdlValue HealthCheckConfig where
     jsonGen = genObject
         [ genField "incomingPath" hc_incomingPath
         , genField "outgoingPath" hc_outgoingPath
+        , genField "endpoint" hc_endpoint
         ]
     
     jsonParser = HealthCheckConfig
         <$> parseField "incomingPath"
         <*> parseField "outgoingPath"
+        <*> parseFieldDef "endpoint" Prelude.Nothing
 
 data JsonSource
     = Jsrc_file ADL.Types.FilePath
@@ -317,7 +320,7 @@ data ToolConfig = ToolConfig
     deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
 
 mkToolConfig :: BlobStoreConfig -> ToolConfig
-mkToolConfig releases = ToolConfig "/opt/deploys" "/opt/config" "/opt/var/log/camus2.log" "/opt" "/opt/var/www" "camus2cert" "" releases (stringMapFromList []) (stringMapFromList []) DeployMode_noproxy (Prelude.Just (HealthCheckConfig "/health-check" "/")) "1.16.1"
+mkToolConfig releases = ToolConfig "/opt/deploys" "/opt/config" "/opt/var/log/camus2.log" "/opt" "/opt/var/www" "camus2cert" "" releases (stringMapFromList []) (stringMapFromList []) DeployMode_noproxy (Prelude.Just (HealthCheckConfig "/health-check" "/" Prelude.Nothing)) "1.16.1"
 
 instance AdlValue ToolConfig where
     atype _ = "config.ToolConfig"
@@ -350,7 +353,7 @@ instance AdlValue ToolConfig where
         <*> parseFieldDef "configSources" (stringMapFromList [])
         <*> parseFieldDef "dynamicConfigSources" (stringMapFromList [])
         <*> parseFieldDef "deployMode" DeployMode_noproxy
-        <*> parseFieldDef "healthCheck" (Prelude.Just (HealthCheckConfig "/health-check" "/"))
+        <*> parseFieldDef "healthCheck" (Prelude.Just (HealthCheckConfig "/health-check" "/" Prelude.Nothing))
         <*> parseFieldDef "nginxDockerVersion" "1.16.1"
 
 data Verbosity

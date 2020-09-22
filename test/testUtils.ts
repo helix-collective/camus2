@@ -277,7 +277,7 @@ export async function writeReleaseZip(
   zip: JSZip,
   name = "release.zip"
 ): Promise<void> {
-  console.log("start save releasezip", name);
+  console.log("saving releasezip", name);
   let dest = path.join(setup.dataDirs!.config.releases.value, name);
 
   if (setup.mode === "remote") {

@@ -33,8 +33,8 @@ import Control.Monad(when)
 import Control.Monad.Reader(ask)
 import Control.Monad.IO.Class
 import Data.FileEmbed(embedFile)
-import Data.List(find, partition,elem)
-import Data.Maybe(catMaybes)
+import Data.List(find, partition, elem, sortOn)
+import Data.Maybe(catMaybes, fromMaybe)
 import Data.Foldable(for_)
 import Data.Monoid
 import Data.Word
@@ -148,8 +148,8 @@ executeAction (SetEndPoints liveEndPoints) = do
     callCommandInDir proxyDir "docker-compose up -d"
     callCommandInDir proxyDir "docker kill --signal=SIGHUP frontendproxy"
     where
-      maybeEndpoints :: SM.StringMap EndPoint -> [(LabelledEndpoint,Deploy)] -> [(EndPoint,Maybe Deploy)]
-      maybeEndpoints eps liveEndPoints = [ (ep,findDeploy label) | (label,ep) <- SM.toList eps]
+      maybeEndpoints :: SM.StringMap EndPoint -> [(LabelledEndpoint,Deploy)] -> [(LabelledEndpoint,Maybe Deploy)]
+      maybeEndpoints eps liveEndPoints = [ ((label,ep),findDeploy label) | (label,ep) <- SM.toList eps]
         where
           findDeploy label = fmap snd (find ((==label). fst . fst) liveEndPoints)
 
@@ -249,7 +249,7 @@ writeProxyDockerCompose tcfg path = T.writeFile path (T.intercalate "\n" lines)
     lewwwdir = tc_letsencryptWwwDir tcfg
     nginxVersion = tc_nginxDockerVersion tcfg
 
-writeNginxConfig :: ToolConfig -> ProxyModeConfig -> FilePath -> [(EndPoint,Maybe Deploy)] -> IO ()
+writeNginxConfig :: ToolConfig -> ProxyModeConfig -> FilePath -> [(LabelledEndpoint,Maybe Deploy)] -> IO ()
 writeNginxConfig tcfg pm path eps = do
   etemplate <- case pm_nginxConfTemplatePath pm of
     Nothing -> do
@@ -269,28 +269,30 @@ writeNginxConfig tcfg pm path eps = do
      T.writeFile path text
 
 -- build up the context to be injected into the nginx config template
-nginxConfigContext:: ToolConfig -> ProxyModeConfig -> [(EndPoint,Maybe Deploy)] -> IO NginxConfContext
+nginxConfigContext:: ToolConfig -> ProxyModeConfig -> [(LabelledEndpoint,Maybe Deploy)] -> IO NginxConfContext
 nginxConfigContext tcfg pm eps = do
   -- We only include the ssl paths for the generated certificate in
   -- the context if the physical paths exist on disk
   genSslCertPath <- existingFilePath (tc_letsencryptPrefixDir tcfg <> "/etc/letsencrypt/live/" <> (tc_autoCertName tcfg) <> "/fullchain.pem")
   genSslCertKeyPath <- existingFilePath (tc_letsencryptPrefixDir tcfg <> "/etc/letsencrypt/live/" <> (tc_autoCertName tcfg) <>"/privkey.pem")
   let context = NginxConfContext
-        { ncc_healthCheck = case (tc_healthCheck tcfg, eps) of
-            (Just hc,(_,Just deploy):_) -> NL.fromValue (NginxHealthCheck
-               { nhc_incomingPath = hc_incomingPath hc
-               , nhc_outgoingPath = hc_outgoingPath hc
-               , nhc_outgoingPort = d_port deploy
-               })
-            _ -> NL.null
+        { ncc_healthCheck = fromMaybe NL.null contextHealthCheck
         , ncc_endPoints = fmap contextEndPoint eps
         }
-      contextEndPoint (ep@EndPoint{ep_etype=Ep_httpOnly},deploy) = Ne_http
+      contextHealthCheck = do
+        hc <- tc_healthCheck tcfg
+        hcdeploy <- deployForHealthCheck hc eps
+        return $ NL.fromValue (NginxHealthCheck
+          { nhc_incomingPath = hc_incomingPath hc
+          , nhc_outgoingPath = hc_outgoingPath hc
+          , nhc_outgoingPort = d_port hcdeploy
+          })
+      contextEndPoint ((_,ep@EndPoint{ep_etype=Ep_httpOnly}),deploy) = Ne_http
         NginxHttpEndPoint
         { nhe_serverNames = T.intercalate " " (ep_serverNames ep)
         , nhe_port = NL.fromMaybe (fmap d_port deploy)
         }
-      contextEndPoint (ep@EndPoint{ep_etype=Ep_httpsWithRedirect certMode},deploy) = Ne_https
+      contextEndPoint ((_,ep@EndPoint{ep_etype=Ep_httpsWithRedirect certMode}),deploy) = Ne_https
         NginxHttpsEndPoint
         { nhse_serverNames = T.intercalate " " (ep_serverNames ep)
         , nhse_port = NL.fromMaybe (fmap d_port deploy)
@@ -307,6 +309,17 @@ nginxConfigContext tcfg pm eps = do
       sslCertKeyPath Scm_generated = genSslCertKeyPath
 
   return context
+
+deployForHealthCheck :: HealthCheckConfig -> [(LabelledEndpoint,Maybe Deploy)] -> Maybe Deploy
+deployForHealthCheck hc eps = case hc_endpoint hc of
+  -- if configured find the requested name
+  (Just epname) -> case filter (\((label,_),_) -> label == epname) eps of
+    (_,mdeploy):_ -> mdeploy
+    _ -> Nothing
+  -- otherwise choose the first endpoint in label sorted order
+  Nothing -> case sortOn (fst.fst) eps of
+    (_,mdeploy):_ -> mdeploy
+    _ -> Nothing
 
 existingFilePath :: T.Text -> IO (NL.Nullable T.Text)
 existingFilePath path = do

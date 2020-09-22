@@ -11,6 +11,7 @@ import {
   makeEndPoint,
   makeEndPointType,
   makeMachineLabel,
+  makeHealthCheckConfig
 } from "./adl-gen/config";
 import axios from "axios";
 
@@ -59,6 +60,8 @@ services:
   return zip;
 }
 
+const healthCheckEndpoint = 'other';
+
 /// Tool config with proxy mode
 function makeConfig(setup: TestSetup): ToolConfig {
   return makeToolConfig({
@@ -83,6 +86,11 @@ function makeConfig(setup: TestSetup): ToolConfig {
         slaveLabel: makeMachineLabel("label", "testslave"),
       })
     ),
+    healthCheck: {kind:"just", value: makeHealthCheckConfig({
+      incomingPath: '/health-check',
+      outgoingPath: `/${testfilePath}`,
+      endpoint: {kind:'just',value:healthCheckEndpoint}
+    })}
   });
 }
 
@@ -92,6 +100,7 @@ describe(`Run httpd-proxy-local`, () => {
     dataDirs: null,
     mode: "local",
   };
+
   beforeEach(async () => {
     await setupTest(`httpd-proxy-local`, testSetup);
   });
@@ -155,6 +164,27 @@ describe(`Run httpd-proxy-local`, () => {
       expect(res);
       if (res) {
         expect(res.data).toEqual(rel.testcontents);
+      }
+    }
+
+    {
+      console.log("validate health check");
+      const res = await promiseRetry(async (retry) => {
+        try {
+          const res = await axios.get(
+            `http://localhost/health-check`
+          );
+          return res;
+        } catch (error) {
+          console.error("health check error, retrying...");
+          retry(error);
+        }
+      });
+
+      expect(res);
+      if (res) {
+        const healthcheckcontent = releases.find(r => r.endpoint === healthCheckEndpoint)?.testcontents;
+        expect(res.data).toEqual(healthcheckcontent);
       }
     }
 
