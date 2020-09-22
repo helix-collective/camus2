@@ -23,6 +23,7 @@ import Control.Monad.Catch(finally,catch)
 import Control.Monad.IO.Class
 import Control.Monad.Reader(runReaderT)
 import Data.List(isPrefixOf)
+import Data.Maybe(fromMaybe)
 import Data.Monoid
 import Data.Semigroup ((<>))
 import Data.Version(showVersion)
@@ -32,7 +33,7 @@ import Paths_camus2(version)
 import System.Directory(doesFileExist)
 import System.Environment(getArgs, lookupEnv, getExecutablePath)
 import System.Exit(exitWith,ExitCode(..))
-import System.FilePath(takeDirectory, takeExtension, (</>))
+import System.FilePath(takeBaseName, takeDirectory, takeExtension, (</>))
 import System.Posix.Files(fileExist)
 import Types(REnv(..),IOR, getToolConfig)
 import Util.Aws(mkAwsEnvFn0, AwsEnv)
@@ -230,8 +231,7 @@ runCommand (UnpackRelease (release,toDir)) = runWithConfigAndLog (U.unpackReleas
 runCommand (ExpandTemplate (templatePath,destPath)) = runWithConfigAndLog (U.injectContext id templatePath destPath)
 runCommand AwsDockerLoginCmd = runWithConfigAndLog (C.awsDockerLoginCmd)
 runCommand (Status showSlaves) = runWithConfig (P.showStatus showSlaves)
-runCommand (Start (release,Nothing)) = runWithConfigAndLog (C.createAndStart release release)
-runCommand (Start (release,Just asDeploy)) = runWithConfigAndLog (C.createAndStart release asDeploy)
+runCommand (Start (release,mdeploy)) = runWithConfigAndLog (C.createAndStart release (fromMaybe (deployNameFromRelease release) mdeploy))
 runCommand (Stop deploy) = runWithConfigAndLog (C.stopDeploy deploy)
 runCommand (Connect (endpoint,deploy)) = runWithConfigAndLog (P.connect endpoint deploy)
 runCommand (Disconnect endpoint) = runWithConfigAndLog (P.disconnect endpoint)
@@ -266,6 +266,9 @@ completeConfiguredEndpoints prefix = evalWithConfig $ do
        let endpoints = map (T.unpack . fst) (SM.toList (pm_endPoints pm))
        return (filter (isPrefixOf prefix) endpoints)
      _ -> return []
+
+deployNameFromRelease :: T.Text -> T.Text
+deployNameFromRelease release = T.pack (takeBaseName (T.unpack release))
 
 helpCmd :: IO ()
 helpCmd = do

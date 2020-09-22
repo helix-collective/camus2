@@ -23,6 +23,7 @@ import {
   writeReleaseZip,
   localstack,
   makeReleaseHttpd,
+  defaultDeployName,
 } from "./testUtils";
 import { C2Exec } from "./C2Exec";
 import promiseRetry from "promise-retry";
@@ -120,7 +121,7 @@ describe(`Run httpd-proxy-remote`, () => {
     for (const rel of releases) {
       console.log("c2 start release", rel.releaseName);
       await c2controller.start(rel.releaseName);
-      await c2controller.connect(rel.endpoint, rel.releaseName);
+      await c2controller.connect(rel.endpoint, defaultDeployName(rel.releaseName));
     }
 
     /// In deployment this happens on target machine periodically
@@ -158,7 +159,7 @@ describe(`Run httpd-proxy-remote`, () => {
 
     for (const rel of releases) {
       await c2controller!.disconnect(rel.endpoint);
-      await c2controller!.stop(rel.releaseName);
+      await c2controller!.stop(defaultDeployName(rel.releaseName));
     }
     await c2machine.slaveUpdate();
 
