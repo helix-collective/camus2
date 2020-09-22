@@ -22,6 +22,7 @@ import {
   tearDownTest,
   zipAddReleaseJson,
   writeReleaseZip,
+  defaultDeployName
 } from "./testUtils";
 import { C2Exec } from "./C2Exec";
 import promiseRetry from "promise-retry";
@@ -137,7 +138,7 @@ describe(`Run httpd-proxy-local`, () => {
     for (const rel of releases) {
       console.log("c2 start release", rel.releaseName);
       await c2machine.start(rel.releaseName);
-      await c2machine.connect(rel.endpoint, rel.releaseName);
+      await c2machine.connect(rel.endpoint, defaultDeployName(rel.releaseName));
     }
 
     for (const rel of releases) {
@@ -192,7 +193,7 @@ describe(`Run httpd-proxy-local`, () => {
 
     for (const rel of releases) {
       await c2machine!.disconnect(rel.endpoint);
-      await c2machine!.stop(rel.releaseName);
+      await c2machine!.stop(defaultDeployName(rel.releaseName));
     }
 
     // for test cleanup

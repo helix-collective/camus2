@@ -336,3 +336,7 @@ services:
   zip.file(testfilePath, testfileContents);
   return zip;
 }
+
+export function defaultDeployName(releasename: string): string {
+  return path.parse(releasename).name;
+}

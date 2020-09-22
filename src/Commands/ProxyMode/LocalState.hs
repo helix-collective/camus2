@@ -39,7 +39,7 @@ import Data.Foldable(for_)
 import Data.Monoid
 import Data.Word
 import System.Directory(createDirectoryIfMissing,doesFileExist,doesDirectoryExist,withCurrentDirectory, removeDirectoryRecursive)
-import System.FilePath(takeBaseName, takeDirectory, dropExtension, replaceExtension, (</>))
+import System.FilePath(takeDirectory, dropExtension, replaceExtension, (</>))
 import System.Process(callCommand)
 import Types(IOR, REnv(..), getToolConfig, scopeInfo, info)
 
@@ -119,7 +119,7 @@ executeAction (CreateDeploy d) = do
     tcfg <- getToolConfig
     pm <- getProxyModeConfig
     fetchConfigContext Nothing
-    let deployDir = T.unpack (tc_deploysDir tcfg) </> (takeBaseName (T.unpack (d_label d)))
+    let deployDir = getDeployDir tcfg d
     liftIO $ createDirectoryIfMissing True deployDir
     unpackRelease (contextWithLocalPorts pm (d_port d)) (d_release d) deployDir
 
@@ -131,7 +131,7 @@ executeAction (CreateDeploy d) = do
 executeAction (DestroyDeploy d) = do
   scopeInfo "execute DestroyDeploy" $ do
     tcfg <- getToolConfig
-    let deployDir = T.unpack (tc_deploysDir tcfg) </> (takeBaseName (T.unpack (d_label d)))
+    let deployDir = getDeployDir tcfg d
     rcfg <- getReleaseConfig deployDir
     scopeInfo "running stop script" $ callCommandInDir deployDir (rc_stopCommand rcfg)
     scopeInfo "removing directory" $ liftIO $ removeDirectoryRecursive deployDir
@@ -354,6 +354,9 @@ callCommandInDir inDir cmd = do
 getReleaseConfig :: FilePath -> IOR ReleaseConfig
 getReleaseConfig deployDir = do
   liftIO $ adlFromJsonFile' (deployDir </> "release.json")
+
+getDeployDir :: ToolConfig -> Deploy -> FilePath
+getDeployDir tcfg d = T.unpack (tc_deploysDir tcfg) </> (T.unpack (d_label d))
 
 
 nginxConfTemplate :: T.Text
