@@ -113,7 +113,7 @@ injectContext modifyContextFn templatePath destPath = do
   tcfg <- getToolConfig
   liftIO $ do
     -- load and merge the infrastructure context
-    ctx <- fmap modifyContextFn (loadMergedContext tcfg)
+    ctx <- fmap (modifyContextFn . JS.Object) (loadMergedInfrastructureContext tcfg)
 
     -- interpolate the context into each templated file
     expandTemplateFileToDest ctx templatePath destPath
@@ -141,7 +141,9 @@ unpackRelease modifyContextFn release toDir = do
       rcfg <- adlFromJsonFile' (toDir </> "release.json")
 
       -- load and merge the infrastructure context
-      ctx <- fmap modifyContextFn (loadMergedContext tcfg)
+      ctx1 <- loadMergedInfrastructureContext tcfg
+      ctx2 <- loadMergedReleaseContext toDir rcfg
+      let ctx = modifyContextFn (JS.Object (HM.union ctx1 ctx2))
 
       -- interpolate the context into each templated file
       for_ (rc_templates rcfg) $ \templatePath -> do
@@ -155,20 +157,30 @@ checkReleaseExists release = do
     error ("Release " <> T.unpack release <> " does not exist in release store at " <> T.unpack (bs_label bs ))
   return ()
 
-loadMergedContext :: ToolConfig -> IO JS.Value
-loadMergedContext tcfg = do
-  let cacheDir = T.unpack (tc_contextCache tcfg)
-
-  values <- for (M.toList (SM.toMap (tc_configSources tcfg))) $ \name_src -> do
-    let name = fst name_src
-    let src = snd name_src
+-- Load template context from the infrastructure
+loadMergedInfrastructureContext :: ToolConfig -> IO (HM.HashMap T.Text JS.Value)
+loadMergedInfrastructureContext tcfg = do
+  values <- for (M.toList (SM.toMap (tc_configSources tcfg))) $ \(name,src) -> do
     let cacheFilePath = configContextCacheFilePath tcfg name
     lbs <- LBS.readFile cacheFilePath
     case JS.eitherDecode' lbs of
      (Left e) -> error ("Unable to parse json from " <> cacheFilePath)
      (Right jv) -> return (takeBaseName cacheFilePath, jv)
 
-  return (JS.Object (HM.fromList ([(T.pack file,jv) | (file,jv) <- values]) ))
+  return (HM.fromList ([(T.pack file,jv) | (file,jv) <- values]) )
+
+-- Load template context from the release package
+loadMergedReleaseContext :: FilePath -> ReleaseConfig -> IO (HM.HashMap T.Text JS.Value)
+loadMergedReleaseContext dir rcfg = do
+
+  values <- for (M.toList (SM.toMap (rc_configSources rcfg))) $ \(name,src) -> do
+    let filepath = dir </> T.unpack src
+    lbs <- LBS.readFile filepath
+    case JS.eitherDecode' lbs of
+     (Left e) -> error ("Unable to parse json from " <> filepath)
+     (Right jv) -> return (name, jv)
+
+  return (HM.fromList values)
 
 expandTemplateFileToDest :: JS.Value -> FilePath -> FilePath -> IO ()
 expandTemplateFileToDest ctx templatePath destPath = do

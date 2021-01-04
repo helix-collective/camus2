@@ -195,8 +195,7 @@ export interface HealthCheckConfig {
    */
   incomingPath: string;
   /**
-   * The path to which will will proxy the above on the first
-   * configured endpoint
+   * The path to which will will proxy the above on the c2 deployment
    */
   outgoingPath: string;
   endpoint: sys_types.Maybe<types.EndPointLabel>;
