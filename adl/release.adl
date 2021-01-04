@@ -13,7 +13,8 @@ struct ReleaseConfig
     String stopCommand;
 
     // Files inside the release to be injected into
-    // the template at release time.
+    // the template at release time. The file paths are
+    // relative to the root of the unpacked release.
     StringMap<FilePath> configSources = {};
 };
 
