@@ -11,6 +11,10 @@ struct ReleaseConfig
     String prestartCommand;
     String startCommand;
     String stopCommand;
+
+    // Files inside the release to be injected into
+    // the template at release time.
+    StringMap<FilePath> configSources = {};
 };
 
 };

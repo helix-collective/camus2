@@ -30,6 +30,7 @@ import { makeMaybe } from "./adl-gen/sys/types";
 import { makePair } from "./adl-gen/runtime/sys/types";
 
 const testfilePath = "testfile.txt";
+const extrafilePath = "extrafile.txt";
 
 /// Release zip of a simple http server
 export function makeReleaseHttpdProxyMode(
@@ -37,10 +38,13 @@ export function makeReleaseHttpdProxyMode(
   testfileContents: string
 ): JSZip {
   const releaseConfig = makeReleaseConfig({
-    templates: ["docker-compose.yml.tpl"],
+    templates: ["docker-compose.yml.tpl", extrafilePath + ".tpl"],
     prestartCommand: "",
     startCommand: "touch start && docker-compose up -d && touch started",
     stopCommand: "docker-compose kill && docker-compose rm -f",
+    configSources: {
+       "releasevals" : "releasevals.json"
+    },
   });
 
   const zip = new JSZip();
@@ -57,6 +61,8 @@ services:
       - ./:/usr/local/apache2/htdocs/:ro
   `
   );
+  zip.file(extrafilePath + '.tpl', '{{releasevals.v1}}'),
+  zip.file('releasevals.json', '{"v1" : "foobazbar"}'),
   zip.file(testfilePath, testfileContents);
   return zip;
 }
@@ -165,6 +171,24 @@ describe(`Run httpd-proxy-local`, () => {
       expect(res);
       if (res) {
         expect(res.data).toEqual(rel.testcontents);
+      }
+
+      const res2 = await promiseRetry(async (retry) => {
+        try {
+          console.log("try http get file extra");
+          const res2 = await axios.get(
+            `http://${rel.endpoint}.localhost/${extrafilePath}`
+          );
+          return res2;
+        } catch (error) {
+          console.error("http get file extra error, retrying...");
+          retry(error);
+        }
+      });
+
+      expect(res2);
+      if (res2) {
+        expect(res2.data).toEqual("foobazbar");
       }
     }
 
