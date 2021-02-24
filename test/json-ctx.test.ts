@@ -4,6 +4,7 @@ import fsx from "fs-extra";
 import { v4 as uuid } from "uuid";
 import path from "path";
 import { makeToolConfig, makeDeployMode, ToolConfig } from "./adl-gen/config";
+import promiseRetry from "promise-retry";
 
 import {
   TestSetup,
@@ -34,18 +35,50 @@ function makeRelease(setup: TestSetup, ctxJson: Maybe<string>): JSZip {
     "rva" : "releaseValsA.json",
     "rvb" : "releaseValsB.json",
   };
+  const zip = new JSZip();
 
   if(ctxJson.kind === 'just') {
     // test that the json context is exported ready before prestart
     const ctxJsonFile = ctxJson.value;
     releaseConfig = makeReleaseConfig({
-      templates: [],
-      prestartCommand: `[ -f ${ctxJsonFile} ] && touch prestarted`,
-      startCommand: `[ -f ${ctxJsonFile} ] && touch started`,
-      stopCommand: `[ -f ${ctxJsonFile} ] && touch stopped`,
+      templates: ["docker-compose.yml.tpl"],
+      prestartCommand: `[ -f ${ctxJsonFile} ]  && touch prestarted`,
+      startCommand: `[ -f ${ctxJsonFile} ] && docker-compose up --build -d && touch started`,
+      //stopCommand: `[ -f ${ctxJsonFile} ] && docker-compose kill && docker-compose rm -f && touch stopped`,
+      stopCommand: `[ -f ${ctxJsonFile} ] && docker-compose down && touch stopped`,
       configSources,
       ctxJson
     });
+
+    zip.file(
+    "docker-compose.yml.tpl",
+`version: '2.1'
+services:
+  demo:
+    build: .
+    volumes:
+      - .:/data
+      - ./${ctxJsonFile}:/data/ctx.json
+`
+  );
+
+  // don't do this (building docker image at deploy time in the release.json :)
+  // example of wrangling the json context in the docker image (eg using deno)
+  zip.file(
+    "Dockerfile",
+`FROM hayd/alpine-deno:1.7.2
+CMD ["deno","run","--allow-read","--allow-write","/data/getConfigs.ts"]
+`
+  );
+
+  zip.file('getConfigs.ts', `
+const ctx = JSON.parse(await Deno.readTextFile("/data/ctx.json"));
+
+await Deno.writeTextFile("/data/out.json", JSON.stringify({
+  xx: \`\${ctx.rva.aa} \${ctx.rvb.b.val}\`
+}));
+`);
+
   } else {
     releaseConfig = makeReleaseConfig({
       templates: [],
@@ -57,10 +90,12 @@ function makeRelease(setup: TestSetup, ctxJson: Maybe<string>): JSZip {
     });
   }
 
-  const zip = new JSZip();
+
   zipAddReleaseJson(zip, releaseConfig);
+
   zip.file('releaseValsA.json', JSON.stringify(jsonValsTest.rva));
   zip.file('releaseValsB.json', JSON.stringify(jsonValsTest.rvb));
+
   return zip;
 }
 
@@ -130,6 +165,29 @@ for (const withJsonCtx of withJsonCtxVals) {
           path.join(dataDirs.machineOptDeploys, "release", "started")
         )
       ).toBeTruthy();
+
+      if(withJsonCtx.kind === 'just') {
+        const testOutJsonFilename = path.join(dataDirs.machineOptDeploys, "release", "out.json");
+
+        await promiseRetry(async (retry) => {
+          try {
+            const existsYet = await fsx.pathExists(testOutJsonFilename);
+            if (!existsYet) {
+              throw new Error("Try again");
+            }
+          } catch (error) {
+            console.error("retry awaiting test file create");
+            retry(error);
+          }
+        });
+
+        expect(
+          await fsx.pathExists(testOutJsonFilename)
+        ).toBeTruthy();
+
+        const testOutJson = await fsx.readJSON(testOutJsonFilename);
+        expect(JSON.stringify(testOutJson)).toEqual(JSON.stringify({"xx":"aaaaa bbbb"}));
+      }
 
       await c2.stop("release.zip");
       expect(
