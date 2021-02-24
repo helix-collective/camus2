@@ -22,6 +22,7 @@ executable c2
   other-modules:       ADL.Core
                      , ADL.Core.Value
                      , ADL.Core.StringMap
+                     , ADL.Core.Map
                      , ADL.Core.Nullable
                      , ADL.Core.TypeToken
                      , ADL.Config
