@@ -148,13 +148,8 @@ describe(`Run httpd-proxy-local`, () => {
     }
 
     for (const rel of releases) {
-      expect(
-        await fsx.pathExists(
-          path.join(dataDirs.machineOptDeploys, rel.releaseName, "started")
-        )
-      );
+      const deployName = defaultDeployName(rel.releaseName);
       console.log("http get file test start");
-
       const res = await promiseRetry(async (retry) => {
         try {
           console.log("try http get file test");
@@ -168,10 +163,17 @@ describe(`Run httpd-proxy-local`, () => {
         }
       });
 
-      expect(res);
+      expect(res).toBeTruthy();
       if (res) {
         expect(res.data).toEqual(rel.testcontents);
       }
+
+      // check for 'started' flag after retry loop:
+      expect(
+        await fsx.pathExists(
+          path.join(dataDirs.machineOptDeploys, deployName, "started")
+        )
+      ).toBeTruthy();
 
       const res2 = await promiseRetry(async (retry) => {
         try {
@@ -186,7 +188,7 @@ describe(`Run httpd-proxy-local`, () => {
         }
       });
 
-      expect(res2);
+      expect(res2).toBeTruthy();
       if (res2) {
         expect(res2.data).toEqual("foobazbar");
       }
@@ -206,7 +208,7 @@ describe(`Run httpd-proxy-local`, () => {
         }
       });
 
-      expect(res);
+      expect(res).toBeTruthy();
       if (res) {
         const healthcheckcontent = releases.find(r => r.endpoint === healthCheckEndpoint)?.testcontents;
         expect(res.data).toEqual(healthcheckcontent);
@@ -268,7 +270,7 @@ describe(`Run httpd-proxy-local`, () => {
         await fsx.pathExists(
           path.join(dataDirs.machineOptDeploys, dep.deployName, "started")
         )
-      );
+      ).toBeTruthy();
       console.log("http get file test start");
 
       const res = await promiseRetry(async (retry) => {
@@ -284,7 +286,7 @@ describe(`Run httpd-proxy-local`, () => {
         }
       });
 
-      expect(res);
+      expect(res).toBeTruthy();
       if (res) {
         expect(res.data).toEqual(testcontents);
       }
