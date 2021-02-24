@@ -2,6 +2,7 @@ module release
 {
 
 import types.FilePath;
+import sys.types.Maybe;
 
 /// Configuration for a package to be customized
 /// when unpacked
@@ -16,6 +17,9 @@ struct ReleaseConfig
     // the template at release time. The file paths are
     // relative to the root of the unpacked release.
     StringMap<FilePath> configSources = {};
+
+    /// Save json context used for cfg templating to file
+    Maybe<String> ctxJson = "nothing";
 };
 
 };

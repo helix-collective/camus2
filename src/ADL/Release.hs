@@ -7,6 +7,7 @@ module ADL.Release(
 import ADL.Core
 import Control.Applicative( (<$>), (<*>), (<|>) )
 import Prelude( ($) )
+import qualified ADL.Sys.Types
 import qualified ADL.Types
 import qualified Data.Aeson as JS
 import qualified Data.HashMap.Strict as HM
@@ -21,11 +22,12 @@ data ReleaseConfig = ReleaseConfig
     , rc_startCommand :: T.Text
     , rc_stopCommand :: T.Text
     , rc_configSources :: StringMap (ADL.Types.FilePath)
+    , rc_ctxJson :: (ADL.Sys.Types.Maybe T.Text)
     }
     deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
 
 mkReleaseConfig :: [ADL.Types.FilePath] -> T.Text -> T.Text -> T.Text -> ReleaseConfig
-mkReleaseConfig templates prestartCommand startCommand stopCommand = ReleaseConfig templates prestartCommand startCommand stopCommand (stringMapFromList [])
+mkReleaseConfig templates prestartCommand startCommand stopCommand = ReleaseConfig templates prestartCommand startCommand stopCommand (stringMapFromList []) Prelude.Nothing
 
 instance AdlValue ReleaseConfig where
     atype _ = "release.ReleaseConfig"
@@ -36,6 +38,7 @@ instance AdlValue ReleaseConfig where
         , genField "startCommand" rc_startCommand
         , genField "stopCommand" rc_stopCommand
         , genField "configSources" rc_configSources
+        , genField "ctxJson" rc_ctxJson
         ]
     
     jsonParser = ReleaseConfig
@@ -44,3 +47,4 @@ instance AdlValue ReleaseConfig where
         <*> parseField "startCommand"
         <*> parseField "stopCommand"
         <*> parseFieldDef "configSources" (stringMapFromList [])
+        <*> parseFieldDef "ctxJson" Prelude.Nothing

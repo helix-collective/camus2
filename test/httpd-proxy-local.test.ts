@@ -61,8 +61,8 @@ services:
       - ./:/usr/local/apache2/htdocs/:ro
   `
   );
-  zip.file(extrafilePath + '.tpl', '{{releasevals.v1}}'),
-  zip.file('releasevals.json', '{"v1" : "foobazbar"}'),
+  zip.file(extrafilePath + '.tpl', '{{releasevals.v1}}');
+  zip.file('releasevals.json', '{"v1" : "foobazbar"}');
   zip.file(testfilePath, testfileContents);
   return zip;
 }
