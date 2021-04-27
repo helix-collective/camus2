@@ -75,7 +75,7 @@ combineLogFns logfns1 logfns2 = LogFns log flush close
 messageWithTimestamp :: LT.Text -> IO LT.Text
 messageWithTimestamp text = do
   now <- getCurrentTime
-  return (LT.pack (formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S" now) <> " " <> text)
+  return (LT.pack (formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S%Q" now) <> " " <> text)
 
 -- Returns an AWS logger that directs log messages to the specified Logger
 awsLogger :: Logger -> AWS.Logger
