@@ -117,7 +117,7 @@ http {
   }
 {{#sslCertPath}}
   server {
-    listen 443;
+    listen 443 ssl;
     server_name {{serverNames}};
     ssl_certificate {{sslCertPath}};
     ssl_certificate_key {{sslCertKeyPath}};
