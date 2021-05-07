@@ -27,6 +27,8 @@ struct ToolConfig {
 
     /// The storage location for release zip files
     BlobStoreConfig releases;
+    /// The storage location for application config files
+    Maybe<BlobStoreConfig> applicationConfig = "nothing";
 
     /// Static config sources
     StringKeyMap<StaticConfigName, JsonSource> configSources = {};
