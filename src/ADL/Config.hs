@@ -311,6 +311,7 @@ data ToolConfig = ToolConfig
     , tc_autoCertName :: T.Text
     , tc_autoCertContactEmail :: T.Text
     , tc_releases :: BlobStoreConfig
+    , tc_applicationConfig :: (ADL.Sys.Types.Maybe BlobStoreConfig)
     , tc_configSources :: (ADL.Types.StringKeyMap ADL.Types.StaticConfigName JsonSource)
     , tc_dynamicConfigSources :: (ADL.Types.StringKeyMap ADL.Types.DynamicConfigName DynamicJsonSource)
     , tc_deployMode :: DeployMode
@@ -320,7 +321,7 @@ data ToolConfig = ToolConfig
     deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
 
 mkToolConfig :: BlobStoreConfig -> ToolConfig
-mkToolConfig releases = ToolConfig "/opt/deploys" "/opt/config" "/opt/var/log/camus2.log" "/opt" "/opt/var/www" "camus2cert" "" releases (stringMapFromList []) (stringMapFromList []) DeployMode_noproxy (Prelude.Just (HealthCheckConfig "/health-check" "/" Prelude.Nothing)) "1.16.1"
+mkToolConfig releases = ToolConfig "/opt/deploys" "/opt/config" "/opt/var/log/camus2.log" "/opt" "/opt/var/www" "camus2cert" "" releases Prelude.Nothing (stringMapFromList []) (stringMapFromList []) DeployMode_noproxy (Prelude.Just (HealthCheckConfig "/health-check" "/" Prelude.Nothing)) "1.16.1"
 
 instance AdlValue ToolConfig where
     atype _ = "config.ToolConfig"
@@ -334,6 +335,7 @@ instance AdlValue ToolConfig where
         , genField "autoCertName" tc_autoCertName
         , genField "autoCertContactEmail" tc_autoCertContactEmail
         , genField "releases" tc_releases
+        , genField "applicationConfig" tc_applicationConfig
         , genField "configSources" tc_configSources
         , genField "dynamicConfigSources" tc_dynamicConfigSources
         , genField "deployMode" tc_deployMode
@@ -350,6 +352,7 @@ instance AdlValue ToolConfig where
         <*> parseFieldDef "autoCertName" "camus2cert"
         <*> parseFieldDef "autoCertContactEmail" ""
         <*> parseField "releases"
+        <*> parseFieldDef "applicationConfig" Prelude.Nothing
         <*> parseFieldDef "configSources" (stringMapFromList [])
         <*> parseFieldDef "dynamicConfigSources" (stringMapFromList [])
         <*> parseFieldDef "deployMode" DeployMode_noproxy

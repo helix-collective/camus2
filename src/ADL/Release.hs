@@ -16,7 +16,8 @@ import qualified Data.Text as T
 import qualified Prelude
 
 data ReleaseConfig = ReleaseConfig
-    { rc_templates :: [ADL.Types.FilePath]
+    { rc_downloads :: [ADL.Types.FilePath]
+    , rc_templates :: [ADL.Types.FilePath]
     , rc_prestartCommand :: T.Text
     , rc_startCommand :: T.Text
     , rc_stopCommand :: T.Text
@@ -24,14 +25,15 @@ data ReleaseConfig = ReleaseConfig
     }
     deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
 
-mkReleaseConfig :: [ADL.Types.FilePath] -> T.Text -> T.Text -> T.Text -> ReleaseConfig
-mkReleaseConfig templates prestartCommand startCommand stopCommand = ReleaseConfig templates prestartCommand startCommand stopCommand (stringMapFromList [])
+mkReleaseConfig :: [ADL.Types.FilePath] -> [ADL.Types.FilePath] -> T.Text -> T.Text -> T.Text -> ReleaseConfig
+mkReleaseConfig downloads templates prestartCommand startCommand stopCommand = ReleaseConfig downloads templates prestartCommand startCommand stopCommand (stringMapFromList [])
 
 instance AdlValue ReleaseConfig where
     atype _ = "release.ReleaseConfig"
     
     jsonGen = genObject
-        [ genField "templates" rc_templates
+        [ genField "downloads" rc_downloads
+        , genField "templates" rc_templates
         , genField "prestartCommand" rc_prestartCommand
         , genField "startCommand" rc_startCommand
         , genField "stopCommand" rc_stopCommand
@@ -39,7 +41,8 @@ instance AdlValue ReleaseConfig where
         ]
     
     jsonParser = ReleaseConfig
-        <$> parseField "templates"
+        <$> parseField "downloads"
+        <*> parseField "templates"
         <*> parseField "prestartCommand"
         <*> parseField "startCommand"
         <*> parseField "stopCommand"

@@ -24,6 +24,8 @@ leaves a compressed executable at `/tmp/camus2.x86_64-linux.gz`
 
 # Testing
 
+First copy the `c2` binary to `tests` directory.
+
 The integration tests rely on localstack running under docker to simulate AWS. Also note
 that port 80 on localhost must be available for the tests to work. To run:
 

@@ -2,11 +2,20 @@ module release
 {
 
 import types.FilePath;
+import types.S3Path;
 
 /// Configuration for a package to be customized
 /// when unpacked
 struct ReleaseConfig
 {
+    // Files to be downloaded and placed in the release directory.
+    // The source is relative to the applicationConfig in config.ToolConfig.
+    // Downloads will fail if;
+    // - applicationConfig is not set
+    // - the filename exists or has the same prefix a an entry in templates
+    // Fails are logged but will not necessary cause the c2 command to fail.
+    Vector<FilePath> downloads;
+
     Vector<FilePath> templates;
     String prestartCommand;
     String startCommand;
