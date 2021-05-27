@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 module Util where
-  
+
 import qualified Data.Map as M
 import qualified ADL.Core.StringMap as SM
 import qualified Data.Aeson as JS
@@ -145,9 +145,18 @@ unpackRelease modifyContextFn release toDir = do
       ctx2 <- loadMergedReleaseContext toDir rcfg
       let ctx = modifyContextFn (JS.Object (HM.union ctx1 ctx2))
 
+      -- save raw json context (if enabled)
+      saveJsonContext rcfg toDir ctx
+
       -- interpolate the context into each templated file
       for_ (rc_templates rcfg) $ \templatePath -> do
         expandTemplateFile ctx (toDir </> T.unpack templatePath)
+
+saveJsonContext :: ReleaseConfig -> FilePath -> JS.Value -> IO ()
+saveJsonContext rcfg toDir ctx = do
+  case rc_ctxJson rcfg of
+    Just name -> JS.encodeFile (toDir </> (T.unpack name)) ctx
+    Nothing -> return ()
 
 checkReleaseExists :: T.Text -> IOR ()
 checkReleaseExists release = do

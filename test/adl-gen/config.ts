@@ -445,10 +445,8 @@ export function texprDynamicConfigOptions(): ADL.ATypeExpr<DynamicConfigOptions>
   return {value : {typeRef : {kind: "reference", value : snDynamicConfigOptions}, parameters : []}};
 }
 
-export enum Verbosity {
-  quiet,
-  noisy,
-}
+export type Verbosity = 'quiet' | 'noisy';
+export const valuesVerbosity : Verbosity[] = ['quiet', 'noisy'];
 
 const Verbosity_AST : ADL.ScopedDecl =
   {"moduleName":"config","decl":{"annotations":[],"type_":{"kind":"union_","value":{"typeParams":[],"fields":[{"annotations":[],"serializedName":"quiet","default":{"kind":"nothing"},"name":"quiet","typeExpr":{"typeRef":{"kind":"primitive","value":"Void"},"parameters":[]}},{"annotations":[],"serializedName":"noisy","default":{"kind":"nothing"},"name":"noisy","typeExpr":{"typeRef":{"kind":"primitive","value":"Void"},"parameters":[]}}]}},"name":"Verbosity","version":{"kind":"nothing"}}};
@@ -506,7 +504,7 @@ export function makeLetsEncryptConfig(
     basedir: input.basedir,
     email: input.email,
     domains: input.domains,
-    verbosity: input.verbosity === undefined ? 0 : input.verbosity,
+    verbosity: input.verbosity === undefined ? "quiet" : input.verbosity,
   };
 }
 

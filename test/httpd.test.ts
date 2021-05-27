@@ -67,7 +67,7 @@ for (const remoteMode of ["remote", "local"] as const) {
         await fsx.pathExists(
           path.join(dataDirs.machineOptDeploys, testSetup.randomstr, "started")
         )
-      );
+      ).toBeTruthy();
 
       console.log("http get file test start");
       const res = await promiseRetry(async (retry) => {
@@ -83,7 +83,7 @@ for (const remoteMode of ["remote", "local"] as const) {
         }
       });
 
-      expect(res);
+      expect(res).toBeTruthy();
       if (res) {
         expect(res.data).toEqual(testfileContents);
       }

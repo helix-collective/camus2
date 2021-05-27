@@ -15,7 +15,7 @@ import {
 } from "./testUtils";
 import { C2Exec } from "./C2Exec";
 
-/// Trivial release wit no contents except the release.json - actions just touch files
+/// Trivial release with no contents except the release.json - actions just touch files
 function makeRelease(setup: TestSetup): JSZip {
   const releaseConfig = makeReleaseConfig({
     templates: [],
@@ -64,19 +64,19 @@ for (const remoteMode of ["local", "remote"] as const) {
         await fsx.pathExists(
           path.join(dataDirs.machineOptDeploys, "release", "prestarted")
         )
-      );
+      ).toBeTruthy();
       expect(
         await fsx.pathExists(
           path.join(dataDirs.machineOptDeploys, "release", "started")
         )
-      );
+      ).toBeTruthy();
 
       await c2.stop("release.zip");
       expect(
         await fsx.pathExists(
           path.join(dataDirs.machineOptDeploys, "release", "stopped")
         )
-      );
+      ).toBeTruthy();
     });
   });
 }
