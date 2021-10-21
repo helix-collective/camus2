@@ -27,10 +27,6 @@ export interface ToolConfig {
    * Static config sources
    */
   configSources: types.StringKeyMap<types.StaticConfigName, JsonSource>;
-  /**
-   * Dynamic config sources
-   */
-  dynamicConfigSources: types.StringKeyMap<types.DynamicConfigName, DynamicJsonSource>;
   deployMode: DeployMode;
   healthCheck: sys_types.Maybe<HealthCheckConfig>;
   /**
@@ -54,7 +50,6 @@ export function makeToolConfig(
     autoCertContactEmail?: string,
     releases: BlobStoreConfig,
     configSources?: types.StringKeyMap<types.StaticConfigName, JsonSource>,
-    dynamicConfigSources?: types.StringKeyMap<types.DynamicConfigName, DynamicJsonSource>,
     deployMode?: DeployMode,
     healthCheck?: sys_types.Maybe<HealthCheckConfig>,
     nginxDockerImage?: string,
@@ -71,7 +66,6 @@ export function makeToolConfig(
     autoCertContactEmail: input.autoCertContactEmail === undefined ? "" : input.autoCertContactEmail,
     releases: input.releases,
     configSources: input.configSources === undefined ? {} : input.configSources,
-    dynamicConfigSources: input.dynamicConfigSources === undefined ? {} : input.dynamicConfigSources,
     deployMode: input.deployMode === undefined ? {kind : "noproxy"} : input.deployMode,
     healthCheck: input.healthCheck === undefined ? {kind : "just", value : {incomingPath : "/health-check", outgoingPath : "/", endpoint : {kind : "nothing"}}} : input.healthCheck,
     nginxDockerImage: input.nginxDockerImage === undefined ? "nginx" : input.nginxDockerImage,
@@ -80,7 +74,7 @@ export function makeToolConfig(
 }
 
 const ToolConfig_AST : ADL.ScopedDecl =
-  {"moduleName":"config","decl":{"annotations":[],"type_":{"kind":"struct_","value":{"typeParams":[],"fields":[{"annotations":[],"serializedName":"deploysDir","default":{"kind":"just","value":"/opt/deploys"},"name":"deploysDir","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"contextCache","default":{"kind":"just","value":"/opt/config"},"name":"contextCache","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"logFile","default":{"kind":"just","value":"/opt/var/log/camus2.log"},"name":"logFile","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"letsencryptPrefixDir","default":{"kind":"just","value":"/opt"},"name":"letsencryptPrefixDir","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"letsencryptWwwDir","default":{"kind":"just","value":"/opt/var/www"},"name":"letsencryptWwwDir","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"autoCertName","default":{"kind":"just","value":"camus2cert"},"name":"autoCertName","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}},{"annotations":[],"serializedName":"autoCertContactEmail","default":{"kind":"just","value":""},"name":"autoCertContactEmail","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}},{"annotations":[],"serializedName":"releases","default":{"kind":"nothing"},"name":"releases","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"BlobStoreConfig"}},"parameters":[]}},{"annotations":[],"serializedName":"configSources","default":{"kind":"just","value":{}},"name":"configSources","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"StringKeyMap"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"StaticConfigName"}},"parameters":[]},{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"JsonSource"}},"parameters":[]}]}},{"annotations":[],"serializedName":"dynamicConfigSources","default":{"kind":"just","value":{}},"name":"dynamicConfigSources","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"StringKeyMap"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"DynamicConfigName"}},"parameters":[]},{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"DynamicJsonSource"}},"parameters":[]}]}},{"annotations":[],"serializedName":"deployMode","default":{"kind":"just","value":"noproxy"},"name":"deployMode","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"DeployMode"}},"parameters":[]}},{"annotations":[],"serializedName":"healthCheck","default":{"kind":"just","value":{"just":{"outgoingPath":"/","incomingPath":"/health-check"}}},"name":"healthCheck","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"sys.types","name":"Maybe"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"HealthCheckConfig"}},"parameters":[]}]}},{"annotations":[],"serializedName":"nginxDockerImage","default":{"kind":"just","value":"nginx"},"name":"nginxDockerImage","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}},{"annotations":[],"serializedName":"nginxDockerVersion","default":{"kind":"just","value":"1.21.3"},"name":"nginxDockerVersion","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}}]}},"name":"ToolConfig","version":{"kind":"nothing"}}};
+  {"moduleName":"config","decl":{"annotations":[],"type_":{"kind":"struct_","value":{"typeParams":[],"fields":[{"annotations":[],"serializedName":"deploysDir","default":{"kind":"just","value":"/opt/deploys"},"name":"deploysDir","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"contextCache","default":{"kind":"just","value":"/opt/config"},"name":"contextCache","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"logFile","default":{"kind":"just","value":"/opt/var/log/camus2.log"},"name":"logFile","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"letsencryptPrefixDir","default":{"kind":"just","value":"/opt"},"name":"letsencryptPrefixDir","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"letsencryptWwwDir","default":{"kind":"just","value":"/opt/var/www"},"name":"letsencryptWwwDir","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"FilePath"}},"parameters":[]}},{"annotations":[],"serializedName":"autoCertName","default":{"kind":"just","value":"camus2cert"},"name":"autoCertName","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}},{"annotations":[],"serializedName":"autoCertContactEmail","default":{"kind":"just","value":""},"name":"autoCertContactEmail","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}},{"annotations":[],"serializedName":"releases","default":{"kind":"nothing"},"name":"releases","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"BlobStoreConfig"}},"parameters":[]}},{"annotations":[],"serializedName":"configSources","default":{"kind":"just","value":{}},"name":"configSources","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"StringKeyMap"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"StaticConfigName"}},"parameters":[]},{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"JsonSource"}},"parameters":[]}]}},{"annotations":[],"serializedName":"deployMode","default":{"kind":"just","value":"noproxy"},"name":"deployMode","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"DeployMode"}},"parameters":[]}},{"annotations":[],"serializedName":"healthCheck","default":{"kind":"just","value":{"just":{"outgoingPath":"/","incomingPath":"/health-check"}}},"name":"healthCheck","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"sys.types","name":"Maybe"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"HealthCheckConfig"}},"parameters":[]}]}},{"annotations":[],"serializedName":"nginxDockerImage","default":{"kind":"just","value":"nginx"},"name":"nginxDockerImage","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}},{"annotations":[],"serializedName":"nginxDockerVersion","default":{"kind":"just","value":"1.21.3"},"name":"nginxDockerVersion","typeExpr":{"typeRef":{"kind":"primitive","value":"String"},"parameters":[]}}]}},"name":"ToolConfig","version":{"kind":"nothing"}}};
 
 export const snToolConfig: ADL.ScopedName = {moduleName:"config", name:"ToolConfig"};
 
@@ -408,49 +402,6 @@ export function texprJsonSource(): ADL.ATypeExpr<JsonSource> {
   return {value : {typeRef : {kind: "reference", value : snJsonSource}, parameters : []}};
 }
 
-/**
- * A config source that can be changed to different named Modes at runtime.
- */
-export interface DynamicJsonSource {
-  defaultMode: types.DynamicConfigMode;
-  modes: types.StringKeyMap<types.DynamicConfigMode, JsonSource>;
-}
-
-export function makeDynamicJsonSource(
-  input: {
-    defaultMode: types.DynamicConfigMode,
-    modes: types.StringKeyMap<types.DynamicConfigMode, JsonSource>,
-  }
-): DynamicJsonSource {
-  return {
-    defaultMode: input.defaultMode,
-    modes: input.modes,
-  };
-}
-
-const DynamicJsonSource_AST : ADL.ScopedDecl =
-  {"moduleName":"config","decl":{"annotations":[],"type_":{"kind":"struct_","value":{"typeParams":[],"fields":[{"annotations":[],"serializedName":"defaultMode","default":{"kind":"nothing"},"name":"defaultMode","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"DynamicConfigMode"}},"parameters":[]}},{"annotations":[],"serializedName":"modes","default":{"kind":"nothing"},"name":"modes","typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"StringKeyMap"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"DynamicConfigMode"}},"parameters":[]},{"typeRef":{"kind":"reference","value":{"moduleName":"config","name":"JsonSource"}},"parameters":[]}]}}]}},"name":"DynamicJsonSource","version":{"kind":"nothing"}}};
-
-export const snDynamicJsonSource: ADL.ScopedName = {moduleName:"config", name:"DynamicJsonSource"};
-
-export function texprDynamicJsonSource(): ADL.ATypeExpr<DynamicJsonSource> {
-  return {value : {typeRef : {kind: "reference", value : snDynamicJsonSource}, parameters : []}};
-}
-
-/**
- * Listing of available modes per configName
- */
-export type DynamicConfigOptions = types.StringKeyMap<types.DynamicConfigName, sys_types.Set<types.DynamicConfigMode>>;
-
-const DynamicConfigOptions_AST : ADL.ScopedDecl =
-  {"moduleName":"config","decl":{"annotations":[],"type_":{"kind":"type_","value":{"typeParams":[],"typeExpr":{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"StringKeyMap"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"DynamicConfigName"}},"parameters":[]},{"typeRef":{"kind":"reference","value":{"moduleName":"sys.types","name":"Set"}},"parameters":[{"typeRef":{"kind":"reference","value":{"moduleName":"types","name":"DynamicConfigMode"}},"parameters":[]}]}]}}},"name":"DynamicConfigOptions","version":{"kind":"nothing"}}};
-
-export const snDynamicConfigOptions: ADL.ScopedName = {moduleName:"config", name:"DynamicConfigOptions"};
-
-export function texprDynamicConfigOptions(): ADL.ATypeExpr<DynamicConfigOptions> {
-  return {value : {typeRef : {kind: "reference", value : snDynamicConfigOptions}, parameters : []}};
-}
-
 export enum Verbosity {
   quiet,
   noisy,
@@ -537,8 +488,6 @@ export const _AST_MAP: { [key: string]: ADL.ScopedDecl } = {
   "config.SslCertMode" : SslCertMode_AST,
   "config.SslCertPaths" : SslCertPaths_AST,
   "config.JsonSource" : JsonSource_AST,
-  "config.DynamicJsonSource" : DynamicJsonSource_AST,
-  "config.DynamicConfigOptions" : DynamicConfigOptions_AST,
   "config.Verbosity" : Verbosity_AST,
   "config.LetsEncryptConfig" : LetsEncryptConfig_AST
 };

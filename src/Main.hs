@@ -44,7 +44,6 @@ data Command
   | ShowLog
   | Version
   | ShowDefaultNginxConfig
-  | ShowConfigModes (Maybe T.Text)
   | FetchContext (Maybe Int)
   | UnpackRelease (T.Text,FilePath)
   | ExpandTemplate (FilePath,FilePath)
@@ -81,8 +80,6 @@ commandParser = subparser
      (info' (pure ShowLog) "Show the history of releases deployed via the start command.")
   <> command "show-default-nginx-config"
      (info' (pure ShowDefaultNginxConfig) "Outputs the default template for the nginx config.")
-  <> command "show-config-modes"
-     (info' showConfigParser "Show the available configuration modes.")
   <> command "fetch-context"
      (info' fetchContextParser "Downloads the environmental information files from infrastructure")
   <> command "unpack"
@@ -118,12 +115,6 @@ commandParser = subparser
   <> command "le-cleanup-hook"
      (info' (pure LeCleanupHook) "(internal helper for generate-ssl-certificate)")
   )
-
-showConfigParser :: Parser Command
-showConfigParser = ShowConfigModes <$> (Just <$> dynConfigName <|> pure Nothing)
- where
-   dynConfigName :: Parser T.Text
-   dynConfigName = argument str (metavar "DYN_CONFIG_NAME")
 
 fetchContextParser :: Parser Command
 fetchContextParser = FetchContext <$> retryFlag
@@ -224,8 +215,6 @@ runCommand Version = putStrLn (showVersion version)
 runCommand ListReleases = runWithConfig (C.listReleases)
 runCommand ShowLog = runWithConfig (C.showLog)
 runCommand ShowDefaultNginxConfig = C.showDefaultNginxConfig
-runCommand (ShowConfigModes Nothing) = runWithConfig (C.listConfigsModes)
-runCommand (ShowConfigModes (Just dynamicConfigName)) = runWithConfig (C.showConfigModes dynamicConfigName)
 runCommand (FetchContext retry) = runWithConfigAndLog (U.fetchConfigContext retry)
 runCommand (UnpackRelease (release,toDir)) = runWithConfigAndLog (U.unpackRelease id release toDir)
 runCommand (ExpandTemplate (templatePath,destPath)) = runWithConfigAndLog (U.injectContext id templatePath destPath)

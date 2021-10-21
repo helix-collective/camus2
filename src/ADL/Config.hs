@@ -2,8 +2,6 @@
 module ADL.Config(
     BlobStoreConfig(..),
     DeployMode(..),
-    DynamicConfigOptions,
-    DynamicJsonSource(..),
     EndPoint(..),
     EndPointType(..),
     HealthCheckConfig(..),
@@ -15,7 +13,6 @@ module ADL.Config(
     SslCertPaths(..),
     ToolConfig(..),
     Verbosity(..),
-    mkDynamicJsonSource,
     mkEndPoint,
     mkHealthCheckConfig,
     mkLetsEncryptConfig,
@@ -71,29 +68,6 @@ instance AdlValue DeployMode where
         "noproxy" -> parseUnionVoid DeployMode_noproxy
         "proxy" ->  parseUnionValue DeployMode_proxy
         _ -> parseFail "expected a discriminator for DeployMode (noproxy,proxy)" 
-
-type DynamicConfigOptions = (ADL.Types.StringKeyMap ADL.Types.DynamicConfigName (ADL.Sys.Types.Set ADL.Types.DynamicConfigMode))
-
-data DynamicJsonSource = DynamicJsonSource
-    { djsrc_defaultMode :: ADL.Types.DynamicConfigMode
-    , djsrc_modes :: (ADL.Types.StringKeyMap ADL.Types.DynamicConfigMode JsonSource)
-    }
-    deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
-
-mkDynamicJsonSource :: ADL.Types.DynamicConfigMode -> (ADL.Types.StringKeyMap ADL.Types.DynamicConfigMode JsonSource) -> DynamicJsonSource
-mkDynamicJsonSource defaultMode modes = DynamicJsonSource defaultMode modes
-
-instance AdlValue DynamicJsonSource where
-    atype _ = "config.DynamicJsonSource"
-    
-    jsonGen = genObject
-        [ genField "defaultMode" djsrc_defaultMode
-        , genField "modes" djsrc_modes
-        ]
-    
-    jsonParser = DynamicJsonSource
-        <$> parseField "defaultMode"
-        <*> parseField "modes"
 
 data EndPoint = EndPoint
     { ep_serverNames :: [T.Text]
@@ -312,7 +286,6 @@ data ToolConfig = ToolConfig
     , tc_autoCertContactEmail :: T.Text
     , tc_releases :: BlobStoreConfig
     , tc_configSources :: (ADL.Types.StringKeyMap ADL.Types.StaticConfigName JsonSource)
-    , tc_dynamicConfigSources :: (ADL.Types.StringKeyMap ADL.Types.DynamicConfigName DynamicJsonSource)
     , tc_deployMode :: DeployMode
     , tc_healthCheck :: (ADL.Sys.Types.Maybe HealthCheckConfig)
     , tc_nginxDockerImage :: T.Text
@@ -321,7 +294,7 @@ data ToolConfig = ToolConfig
     deriving (Prelude.Eq,Prelude.Ord,Prelude.Show)
 
 mkToolConfig :: BlobStoreConfig -> ToolConfig
-mkToolConfig releases = ToolConfig "/opt/deploys" "/opt/config" "/opt/var/log/camus2.log" "/opt" "/opt/var/www" "camus2cert" "" releases (stringMapFromList []) (stringMapFromList []) DeployMode_noproxy (Prelude.Just (HealthCheckConfig "/health-check" "/" Prelude.Nothing)) "nginx" "1.21.3"
+mkToolConfig releases = ToolConfig "/opt/deploys" "/opt/config" "/opt/var/log/camus2.log" "/opt" "/opt/var/www" "camus2cert" "" releases (stringMapFromList []) DeployMode_noproxy (Prelude.Just (HealthCheckConfig "/health-check" "/" Prelude.Nothing)) "nginx" "1.21.3"
 
 instance AdlValue ToolConfig where
     atype _ = "config.ToolConfig"
@@ -336,7 +309,6 @@ instance AdlValue ToolConfig where
         , genField "autoCertContactEmail" tc_autoCertContactEmail
         , genField "releases" tc_releases
         , genField "configSources" tc_configSources
-        , genField "dynamicConfigSources" tc_dynamicConfigSources
         , genField "deployMode" tc_deployMode
         , genField "healthCheck" tc_healthCheck
         , genField "nginxDockerImage" tc_nginxDockerImage
@@ -353,7 +325,6 @@ instance AdlValue ToolConfig where
         <*> parseFieldDef "autoCertContactEmail" ""
         <*> parseField "releases"
         <*> parseFieldDef "configSources" (stringMapFromList [])
-        <*> parseFieldDef "dynamicConfigSources" (stringMapFromList [])
         <*> parseFieldDef "deployMode" DeployMode_noproxy
         <*> parseFieldDef "healthCheck" (Prelude.Just (HealthCheckConfig "/health-check" "/" Prelude.Nothing))
         <*> parseFieldDef "nginxDockerImage" "nginx"

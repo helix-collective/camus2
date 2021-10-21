@@ -19,8 +19,8 @@ import qualified Text.Mustache.Types as TM
 import qualified Commands.ProxyMode as P
 import qualified ADL.Sys.Types as ST
 
-import ADL.Config(ToolConfig(..), DeployMode(..), ProxyModeConfig(..), DynamicConfigOptions(..), DynamicJsonSource(..), JsonSource(..))
-import ADL.Types(DynamicConfigName, StringKeyMap, DynamicConfigMode)
+import ADL.Config(ToolConfig(..), DeployMode(..), ProxyModeConfig(..), JsonSource(..))
+import ADL.Types(StringKeyMap)
 import ADL.Release(ReleaseConfig(..))
 import ADL.Core(adlFromJsonFile')
 import Blobs(releaseBlobStore, BlobStore(..))
@@ -176,41 +176,3 @@ showLog = do
 showDefaultNginxConfig :: IO ()
 showDefaultNginxConfig = do
   T.putStrLn nginxConfTemplate
-
-type DynamicConfigSources = (StringKeyMap DynamicConfigName DynamicJsonSource)
-
-listDynamicConfigOptions :: DynamicConfigSources -> DynamicConfigOptions
-listDynamicConfigOptions dcsrcs = SM.fromList (M.toList (M.map dynamicJsonSourceToSet (SM.toMap dcsrcs)))
-  where
-    dynamicJsonSourceToSet :: DynamicJsonSource -> ST.Set DynamicConfigMode
-    dynamicJsonSourceToSet x = M.keysSet (SM.toMap( djsrc_modes x))
-
-getConfigOptionsText :: DynamicConfigOptions -> [T.Text]
-getConfigOptionsText dcopts = map dcNameModesText (SM.toList dcopts)
-  where
-    dcNameModesText :: (T.Text, ST.Set DynamicConfigMode) -> T.Text
-    dcNameModesText tupl = T.intercalate (T.pack ": ") [T.justifyLeft 10 ' ' (fst tupl), dcModesText (snd tupl)]
-
-    dcModesText :: (ST.Set DynamicConfigMode) -> T.Text
-    dcModesText setdcm = T.intercalate (T.pack ", ") (S.toList setdcm)
-
-printDynamicConfigOptions :: DynamicConfigOptions -> IO ()
-printDynamicConfigOptions dcopts = liftIO $ do
-  mapM_ T.putStrLn (getConfigOptionsText dcopts)
-
-printDynamicConfigOptionsSingle :: DynamicConfigName -> DynamicConfigOptions -> IO ()
-printDynamicConfigOptionsSingle dcname dcopts = liftIO $ do
-  mapM_ T.putStrLn (getConfigOptionsText (filterByConfigName dcname dcopts))
-  where
-    filterByConfigName :: DynamicConfigName -> DynamicConfigOptions -> DynamicConfigOptions
-    filterByConfigName dcname dcopts = SM.fromList (M.toList (M.filterWithKey (\k _ -> k == dcname) (SM.toMap dcopts)))
-
-listConfigsModes :: IOR ()
-listConfigsModes = do
-  tcfg <- getToolConfig
-  liftIO $ printDynamicConfigOptions (listDynamicConfigOptions (tc_dynamicConfigSources tcfg))
-
-showConfigModes :: DynamicConfigName -> IOR ()
-showConfigModes dcname = do
-  tcfg <- getToolConfig
-  liftIO $ printDynamicConfigOptionsSingle dcname (listDynamicConfigOptions (tc_dynamicConfigSources tcfg))
