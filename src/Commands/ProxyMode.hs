@@ -102,10 +102,9 @@ createAndStart release asDeploy = do
     tcfg <- getToolConfig
     state <- getState
     port <- liftIO $ allocatePort pm state
-    dcfgmodes <- return SM.empty
-    updateState (nextState (createDeploy port dcfgmodes))
+    updateState (nextState (createDeploy port))
   where
-    createDeploy port dcfgmodes = (CreateDeploy (Deploy asDeploy release port dcfgmodes))
+    createDeploy port = (CreateDeploy (Deploy asDeploy release port))
 
 -- | Stop and remove a deployment
 stopAndRemove :: T.Text -> IOR ()

@@ -18,10 +18,4 @@ type ConfigName = String;
 /// ConfigName as part of the static config - eg 'infrastructure' 'secrets'
 type StaticConfigName = ConfigName;
 
-/// ConfigName for switchable dynamic configs - eg 'queue' 'processing'
-type DynamicConfigName = ConfigName;
-
-/// Name of a mode of a dynamic config - eg 'active' 'inactive'
-type DynamicConfigMode = String;
-
 };

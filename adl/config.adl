@@ -31,9 +31,6 @@ struct ToolConfig {
     /// Static config sources
     StringKeyMap<StaticConfigName, JsonSource> configSources = {};
 
-    /// Dynamic config sources
-    StringKeyMap<DynamicConfigName, DynamicJsonSource> dynamicConfigSources = {};
-
     DeployMode deployMode = "noproxy";
 
     // Support for AWS health checks in proxy mode
@@ -138,22 +135,11 @@ union JsonSource
     String awsSecretArn;
 };
 
-/// A config source that can be changed to different named Modes at runtime.
-struct DynamicJsonSource {
-  DynamicConfigMode defaultMode;
-
-  StringKeyMap<DynamicConfigMode, JsonSource> modes;
-};
-
-/// Listing of available modes per configName
-type DynamicConfigOptions = StringKeyMap<DynamicConfigName, Set<DynamicConfigMode>>;
-
 union Verbosity
 {
   Void quiet;
   Void noisy;
 };
-
 
 /// Configuration specification for the letsencrypt related functions
 struct LetsEncryptConfig
