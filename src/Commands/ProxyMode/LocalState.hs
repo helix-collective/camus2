@@ -237,7 +237,7 @@ writeProxyDockerCompose tcfg path = T.writeFile path (T.intercalate "\n" lines)
       , "services:"
       , "  nginx:"
       , "    container_name: frontendproxy"
-      , "    image: nginx:" <> nginxVersion
+      , "    image: " <> nginxImage <> ":" <> nginxVersion
       , "    network_mode: host"
       , "    volumes:"
       , "      - ./nginx.conf:/etc/nginx/nginx.conf"
@@ -247,6 +247,7 @@ writeProxyDockerCompose tcfg path = T.writeFile path (T.intercalate "\n" lines)
       ]
     ledir = tc_letsencryptPrefixDir tcfg
     lewwwdir = tc_letsencryptWwwDir tcfg
+    nginxImage = tc_nginxDockerImage tcfg
     nginxVersion = tc_nginxDockerVersion tcfg
 
 writeNginxConfig :: ToolConfig -> ProxyModeConfig -> FilePath -> [(LabelledEndpoint,Maybe Deploy)] -> IO ()

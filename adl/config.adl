@@ -42,8 +42,11 @@ struct ToolConfig {
        "outgoingPath" : "/"
     }};
 
+    /// The image of nginx to use
+    String nginxDockerImage = "nginx";
+
     /// The version of the standard nginx docker image to use
-    String nginxDockerVersion = "1.16.1";
+    String nginxDockerVersion = "1.21.3";
 };
 
 union DeployMode {
