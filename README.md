@@ -64,6 +64,6 @@ It defaults to ../etc/camus2.(json|yaml) relative to the executable.
 
 # Additional Information
 
-- [Installation and configuration](devdocs/installation.md)
+- [Development and testing Notes](devdocs/installation.md)
 - [Usage](devdocs/help.md)
 - [Userguide home](https://helix-collective.github.io/camus2/index.html)

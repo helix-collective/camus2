@@ -32,7 +32,7 @@ that port 80 on localhost must be available for the tests to work. To run:
 Start localstack:
 
 ```
-cd tests/localstack
+cd test/localstack
 docker network prune
 docker-compose up -d
 ```
@@ -45,19 +45,27 @@ export AWS_SECRET_ACCESS_KEY=DUMMY
 aws --endpoint-url=http://localhost:4572 s3 ls
 ```
 
+Confirm no HTTP server is running locally beforehand:
+```
+curl -v localhost
+curl -v localhost:80
+```
+(Maybe you need to kill local nginx server if it's running?)
+
+
 Run the tests:
 
 ```
 export AWS_ACCESS_KEY_ID=DUMMY
 export AWS_SECRET_ACCESS_KEY=DUMMY
-cd tests
+cd test
 yarn test
 ```
 
 Finally, shut down localstack, and clean up networks
 
 ```
-cd tests/localstack
+cd test/localstack
 docker-compose down
 docker network prune
 ```
