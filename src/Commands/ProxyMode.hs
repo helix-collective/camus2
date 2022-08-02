@@ -15,8 +15,10 @@ module Commands.ProxyMode(
 
 import qualified ADL.Core.StringMap as SM
 import qualified Data.Aeson as JS
+import qualified Data.Aeson.Encode.Pretty as JS
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.IO as T
@@ -25,7 +27,7 @@ import qualified Network.HTTP.Client as HC
 import qualified Network.AWS.EC2.Metadata as EC2M
 
 import ADL.Config(EndPoint(..), EndPointType(..))
-import ADL.Core(adlFromJsonFile', adlToJsonFile)
+import ADL.Core(adlFromJsonFile', adlToJsonFile, adlToJson)
 import ADL.Release(ReleaseConfig(..))
 import ADL.Config(ToolConfig(..), DeployMode(..), ProxyModeConfig(..), MachineLabel(..))
 import ADL.State(State(..), Deploy(..), SlaveState(..), SlaveStatus(..))
@@ -54,8 +56,42 @@ import System.Process(callCommand)
 import Types(IOR, REnv(..), getToolConfig, scopeInfo, flushlog, info, lerror)
 
 -- | Show the proxy system status, specifically the endpoints and live deploys.
-showStatus :: Bool -> IOR ()
-showStatus showSlaves = do
+showStatus :: Bool -> Bool -> IOR ()
+showStatus showSlaves jsonOutput = do
+  case jsonOutput of
+     True  -> jsonStatus showSlaves
+     False -> textStatus showSlaves
+
+jsonStatus :: Bool -> IOR ()
+jsonStatus showSlaves = do
+  master <- fmap adlToJson getState
+  jv <- case showSlaves of
+    False -> do
+      return ( JS.toJSON ( HM.fromList [
+          ("master" :: String, master)
+        ]))
+    True -> do
+      slaves <- fmap (JS.toJSON . map slaveToJson) getSlaveStates
+      return ( JS.toJSON ( HM.fromList [
+          ("master" :: String, master),
+          ("slaves" :: String, slaves)
+        ]))
+  liftIO $ LBS.putStrLn (JS.encodePretty jv)
+
+  return ()
+  where
+    slaveToJson :: (T.Text, LastModified SlaveState) -> JS.Value
+    slaveToJson (label,slave) = JS.toJSON (HM.fromList [
+        ("label":: String, JS.toJSON label),
+        ("lastModified":: String, JS.toJSON (lm_modifiedAt slave)),
+        ("state":: String, adlToJson (lm_value slave))
+      ])
+
+
+
+
+textStatus :: Bool -> IOR ()
+textStatus showSlaves = do
   pm <- getProxyModeConfig
   state <- getState
   liftIO $ T.putStrLn "---------------------MASTER-------------------------------------------"

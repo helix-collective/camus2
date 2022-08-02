@@ -48,7 +48,7 @@ data Command
   | UnpackRelease (T.Text,FilePath)
   | ExpandTemplate (FilePath,FilePath)
   | AwsDockerLoginCmd
-  | Status Bool
+  | Status Bool Bool
   | Start (T.Text,Maybe T.Text)
   | Stop T.Text
   | Connect (T.Text,T.Text)
@@ -136,12 +136,17 @@ expandTemplateParser = ExpandTemplate <$> arguments
    arguments = (,) <$> fileArgument "TEMPLATE" <*> fileArgument "OUTFILE"
 
 statusParser :: Parser Command
-statusParser = Status <$> showSlaves
+statusParser = Status <$> showSlaves <*> jsonOutput
  where
    showSlaves :: Parser Bool
    showSlaves = flag False True
      (  long "show-slaves"
      <> help "include per slave status"
+     )
+   jsonOutput :: Parser Bool
+   jsonOutput = flag False True
+     (  long "json-output"
+     <> help "output as json"
      )
 
 startParser :: Parser Command
@@ -219,7 +224,7 @@ runCommand (FetchContext retry) = runWithConfigAndLog (U.fetchConfigContext retr
 runCommand (UnpackRelease (release,toDir)) = runWithConfigAndLog (U.unpackRelease id release toDir)
 runCommand (ExpandTemplate (templatePath,destPath)) = runWithConfigAndLog (U.injectContext id templatePath destPath)
 runCommand AwsDockerLoginCmd = runWithConfigAndLog (C.awsDockerLoginCmd)
-runCommand (Status showSlaves) = runWithConfig (P.showStatus showSlaves)
+runCommand (Status showSlaves jsonOutput) = runWithConfig (P.showStatus showSlaves jsonOutput)
 runCommand (Start (release,mdeploy)) = runWithConfigAndLog (C.createAndStart release (fromMaybe (deployNameFromRelease release) mdeploy))
 runCommand (Stop deploy) = runWithConfigAndLog (C.stopDeploy deploy)
 runCommand (Connect (endpoint,deploy)) = runWithConfigAndLog (P.connect endpoint deploy)
