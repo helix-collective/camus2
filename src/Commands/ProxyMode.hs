@@ -298,10 +298,7 @@ shutdownProxy = do
 
 generateSslCertificate :: IOR ()
 generateSslCertificate = do
-  pm <- getProxyModeConfig
-  case pm_remoteStateS3 pm of
-    Nothing -> generateLocalSslCertificate
-    _ -> return ()
+  generateLocalSslCertificate
 
 
 getSlaveLabel :: IOR T.Text
