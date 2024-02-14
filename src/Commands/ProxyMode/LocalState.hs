@@ -235,7 +235,7 @@ writeProxyDockerCompose :: ToolConfig -> FilePath -> IO ()
 writeProxyDockerCompose tcfg path = T.writeFile path (T.intercalate "\n" lines)
   where
     lines =
-      [ "version: '2'"
+      [ "version: '3'"
       , "services:"
       , "  nginx:"
       , "    container_name: frontendproxy"
