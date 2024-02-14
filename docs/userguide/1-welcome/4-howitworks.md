@@ -37,7 +37,7 @@ When an proxy endpoint is specified in the config file, and is required - either
 It does this by:
 
 - Using the ports and endpoint information specified in the config file, creating a nginx config via an internally maintained mustache template. - `c2 show-default-nginx-config` will show the config file. You can use your own if the default does not meet your needs.
-- Running a `docker-compose -up` command to download and run the latest nginx docker container, configured using the artefact generated in the previous step.
+- Running a `docker compose -up` command to download and run the latest nginx docker container, configured using the artefact generated in the previous step.
 - When required, connect the reverse proxy docker container, to a specified port/release by updating the nginx config, an reloading the reverse proxy with the new config.
 
 ## Blue/Green switching

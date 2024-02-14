@@ -34,7 +34,7 @@ Start localstack:
 ```
 cd test/localstack
 docker network prune
-docker-compose up -d
+docker compose up -d
 ```
 
 Confirm localstack is working (should complete without error):
@@ -66,7 +66,7 @@ Finally, shut down localstack, and clean up networks
 
 ```
 cd test/localstack
-docker-compose down
+docker compose down
 docker network prune
 ```
 

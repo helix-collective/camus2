@@ -195,7 +195,7 @@ export function useLocalStack() {
   beforeAll(async () => {
     if (useInlineLocalstack) {
       console.log("starting localstack");
-      localstack.dockerCompose = spawn("docker-compose", ["up"], {
+      localstack.dockerCompose = spawn("docker compose", ["up"], {
         detached: true,
         cwd: path.join(__dirname, "localstack"),
       });
@@ -312,8 +312,8 @@ export function makeReleaseHttpd(
   const releaseConfig = makeReleaseConfig({
     templates: ["docker-compose.yml.tpl"],
     prestartCommand: "",
-    startCommand: "touch start && docker-compose up -d && touch started",
-    stopCommand: "docker-compose kill && docker-compose rm -f",
+    startCommand: "touch start && docker compose up -d && touch started",
+    stopCommand: "docker compose kill && docker compose rm -f",
   });
 
   const zip = new JSZip();

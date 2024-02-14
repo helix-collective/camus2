@@ -16,8 +16,8 @@ In the latest camus2 release package, you will find several useful files to help
 - camus2_proxy.yaml - We will use this as a config file telling camus2 where to look for releases, where to deploy them to, and, in which mode (noproxy/proxy with local state/proxy with remote state)
 - release.json - include this file in your release archive, it will tell camus2 how to deploy your release.
 
-We will be assuming that your simple deployment requires `docker-compose up` to be executed.
-This means that you need to have docker-compose installed on your machine, and that it needs access to whichever docker repository your image is stored in.
+We will be assuming that your simple deployment requires `docker compose up` to be executed.
+This means that you need to have docker installed on your machine, and that it needs access to whichever docker repository your image is stored in.
 
 You will also need a location to store your release archives, your logs, and a location where the releases will be unpacked.
 Make sure all the locations have the necessary rights (and exist), and specify them in the config file.
@@ -48,8 +48,8 @@ Our release will also include a release.json with the following:
 ```json
 {
   "prestartCommand": "",
-  "startCommand": "docker-compose up -d",
-  "stopCommand": "docker-compose stop && docker-compose rm -f && docker system prune -f",
+  "startCommand": "docker compose up -d",
+  "stopCommand": "docker compose stop && docker compose rm -f && docker system prune -f",
   "templates": ["docker-compose.yml.tpl"]
 }
 ```

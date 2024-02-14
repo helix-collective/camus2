@@ -17,8 +17,8 @@ In the latest camus2 release package, you will find several useful files to help
 - release.json - include this file in your release archive, it will tell camus2 how to deploy your release.
 - a couple of other files, but lets set them aside until we do a proxy deploy.
 
-We will be assuming that your simple deployment requires `docker-compose up` to be executed.
-This means that you need to have docker-compose installed on your machine, and that it needs access to whichever docker repository your image is stored in.
+We will be assuming that your simple deployment requires `docker compose up` to be executed.
+This means that you need to have docker installed on your machine, and that it needs access to whichever docker repository your image is stored in.
 
 You will also need a location to store your release archives, your logs, and a location where the releases will be unpacked.
 Make sure all the locations have the necessary rights (and exist), and specify them in the config file.
@@ -37,15 +37,15 @@ services:
 
 ```
 
-When executed with `docker-compose up`, this will download the Apache http webserver image, and start it.
+When executed with `docker compose up`, this will download the Apache http webserver image, and start it.
 
 Our release will also include a release.json with the following:
 
 ```json
 {
   "prestartCommand": "",
-  "startCommand": "docker-compose up",
-  "stopCommand": "docker-compose stop && docker-compose rm -f && docker system prune -f",
+  "startCommand": "docker compose up",
+  "stopCommand": "docker compose stop && docker compose rm -f && docker system prune -f",
   "templates": []
 }
 ```
