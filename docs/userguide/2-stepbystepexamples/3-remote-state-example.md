@@ -20,7 +20,7 @@ As we will be connecting to s3 for storing our state files, you will need to con
 
 ===
 
-We will be assuming that your simple deployment requires `docker-compose up` to be executed.
+We will be assuming that your simple deployment requires `docker compose up` to be executed.
 This means that you need to have docker-compose installed on your machine, and that it needs access to whichever docker repository your image is stored in.
 
 You will also need a location to store your release archives, your logs, and a location where the releases will be unpacked.
@@ -52,8 +52,8 @@ Our release will also include a release.json with the following:
 ```json
 {
   "prestartCommand": "",
-  "startCommand": "docker-compose up -d",
-  "stopCommand": "docker-compose stop && docker-compose rm -f && docker system prune -f",
+  "startCommand": "docker compose up -d",
+  "stopCommand": "docker compose stop && docker compose rm -f && docker system prune -f",
   "templates": ["docker-compose.yml.tpl"]
 }
 ```

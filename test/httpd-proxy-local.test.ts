@@ -40,8 +40,8 @@ export function makeReleaseHttpdProxyMode(
   const releaseConfig = makeReleaseConfig({
     templates: ["docker-compose.yml.tpl", extrafilePath + ".tpl"],
     prestartCommand: "",
-    startCommand: "touch start && docker-compose up -d && touch started",
-    stopCommand: "docker-compose kill && docker-compose rm -f",
+    startCommand: "touch start && docker compose up -d && touch started",
+    stopCommand: "docker compose kill && docker compose rm -f",
     configSources: {
        "releasevals" : "releasevals.json"
     },

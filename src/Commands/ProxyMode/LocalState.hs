@@ -145,7 +145,9 @@ executeAction (SetEndPoints liveEndPoints) = do
     scopeInfo "writing proxy config files" $ liftIO $ do
       writeProxyDockerCompose tcfg (proxyDir </> "docker-compose.yml")
       writeNginxConfig tcfg pm (proxyDir </> "nginx.conf") (maybeEndpoints allEndPoints liveEndPoints)
-    callCommandInDir proxyDir "docker-compose up -d"
+    callCommandInDir proxyDir "docker compose up -d"
+    -- We send the SIGHUP command to the frontend proxy so that nginx reloads its configuration
+    -- ref: https://docs.nginx.com/nginx/admin-guide/basic-functionality/runtime-control/
     callCommandInDir proxyDir "docker kill --signal=SIGHUP frontendproxy"
     where
       maybeEndpoints :: SM.StringMap EndPoint -> [(LabelledEndpoint,Deploy)] -> [(LabelledEndpoint,Maybe Deploy)]
@@ -233,7 +235,7 @@ writeProxyDockerCompose :: ToolConfig -> FilePath -> IO ()
 writeProxyDockerCompose tcfg path = T.writeFile path (T.intercalate "\n" lines)
   where
     lines =
-      [ "version: '2'"
+      [ "version: '3'"
       , "services:"
       , "  nginx:"
       , "    container_name: frontendproxy"
