@@ -47,7 +47,7 @@ data Command
   | FetchContext (Maybe Int)
   | UnpackRelease (T.Text,FilePath)
   | ExpandTemplate (FilePath,FilePath)
-  | AwsDockerLoginCmd
+  | AwsDockerLoginCmd (Maybe T.Text)
   | Status Bool Bool
   | Start (T.Text,Maybe T.Text)
   | Stop T.Text
@@ -87,7 +87,7 @@ commandParser = subparser
   <> command "expand-template"
      (info' expandTemplateParser "Injects the config contexts specified into a template")
   <> command "aws-docker-login-cmd"
-     (info' (pure AwsDockerLoginCmd) "Runs the appropriate docker login command to access configured repositories")
+     (info' awsDockerLoginCmd "Runs the appropriate docker login command to access configured repositories")
   <> command "status"
      (info' statusParser "Show the proxy system status: specifically the endpoints and live deploys")
   <> command "start"
@@ -134,6 +134,11 @@ expandTemplateParser :: Parser Command
 expandTemplateParser = ExpandTemplate <$> arguments
  where
    arguments = (,) <$> fileArgument "TEMPLATE" <*> fileArgument "OUTFILE"
+
+awsDockerLoginCmd :: Parser Command
+awsDockerLoginCmd = AwsDockerLoginCmd <$> registryId
+ where
+   registryId = optional $ argument str (metavar "REGISTRY_ID")
 
 statusParser :: Parser Command
 statusParser = Status <$> showSlaves <*> jsonOutput
@@ -223,7 +228,7 @@ runCommand ShowDefaultNginxConfig = C.showDefaultNginxConfig
 runCommand (FetchContext retry) = runWithConfigAndLog (U.fetchConfigContext retry)
 runCommand (UnpackRelease (release,toDir)) = runWithConfigAndLog (U.unpackRelease id release toDir)
 runCommand (ExpandTemplate (templatePath,destPath)) = runWithConfigAndLog (U.injectContext id templatePath destPath)
-runCommand AwsDockerLoginCmd = runWithConfigAndLog (C.awsDockerLoginCmd)
+runCommand (AwsDockerLoginCmd registryId) = runWithConfigAndLog (C.awsDockerLoginCmd registryId)
 runCommand (Status showSlaves jsonOutput) = runWithConfig (P.showStatus showSlaves jsonOutput)
 runCommand (Start (release,mdeploy)) = runWithConfigAndLog (C.createAndStart release (fromMaybe (deployNameFromRelease release) mdeploy))
 runCommand (Stop deploy) = runWithConfigAndLog (C.stopDeploy deploy)

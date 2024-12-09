@@ -9,6 +9,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.Conduit.List as CL
 import qualified Data.HashMap.Strict as HM
+import qualified Data.List.NonEmpty as LNE
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.IO as T
@@ -134,13 +135,14 @@ listReleases = do
 
 -- Output the command line to docker login to access the default
 -- repository
-awsDockerLoginCmd :: IOR ()
-awsDockerLoginCmd = do
+awsDockerLoginCmd :: Maybe T.Text -> IOR ()
+awsDockerLoginCmd registryId = do
   tcfg <- getToolConfig
   env <- mkAwsEnv
   liftIO $ do
     runResourceT . runAWST env $ do
-      resp <- send ECR.getAuthorizationToken
+      let req = set ECR.gatRegistryIds (fmap (\r -> LNE.fromList [r]) registryId) ECR.getAuthorizationToken
+      resp <- send req
       case view ECR.gatrsAuthorizationData resp of
         [authData] -> do
           let rawtoken = fromMaybe ("error no token in authdata") (view ECR.adAuthorizationToken authData)
