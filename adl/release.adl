@@ -2,6 +2,7 @@ module release
 {
 
 import types.FilePath;
+import sys.types.Maybe;
 
 /// Configuration for a package to be customized
 /// when unpacked
@@ -11,6 +12,8 @@ struct ReleaseConfig
     String prestartCommand;
     String startCommand;
     String stopCommand;
+    Maybe<String> connectCommand = "nothing";
+    Maybe<String> disconnectCommand = "nothing";
 
     // Files inside the release to be injected into
     // the template at release time. The file paths are
