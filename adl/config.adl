@@ -77,6 +77,15 @@ struct ProxyModeConfig {
     /// The mustache template to used be for the proxy nginx configuration
     /// If not provided the builtin template will be used.
     Maybe<FilePath> nginxConfTemplatePath = "nothing";
+
+    /// The commands to run as part a connect and disconnect calls.
+    /// Command arguments are ENPOINT DEPLOYMENT PORT
+    Maybe<LifecycleCmds> lifecycleCommands = "nothing";
+};
+
+struct LifecycleCmds {
+    String connect;
+    String disconnect;
 };
 
 struct HealthCheckConfig {
